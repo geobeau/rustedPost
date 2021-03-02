@@ -1,13 +1,40 @@
 use std::collections::HashMap;
 
-// #![feature(entry_or_default)]
-// use std::collections::HashMap;
+#[derive(Clone)]
+struct Record {
+    labelPair: Vec<labelPair>,
+}
 
-// let mut map: HashMap<&str, Option<u32>> = HashMap::new();
-// map.entry("poneyland").or_default();
+#[derive(Clone)]
+struct labelPair {
+    key: String,
+    val: String
+}
 
-//assert_eq!(map["poneyland"], None);
+struct RecordStore {
+    store: Vec<Record>
+}
 
+impl RecordStore {
+    fn new() -> RecordStore {
+        RecordStore {store: Vec::new()}
+    }
+
+    fn add(&mut self, record: Record) -> usize {
+        self.store.push(record);
+        self.store.len() -1
+    }
+
+    fn get(&mut self, index: usize) -> Option<Record> {
+        match self.store.get(index) {
+            Some(x) => Some(x.clone()),
+            None => None,
+        }
+    }
+}
+
+/// Index contains a map of field name to field
+/// A field contains a map of 
 struct Index {
     index_map: HashMap<String, Field>
 }
@@ -19,8 +46,24 @@ impl Index {
 
     fn get(&mut self, index_name: String) -> Field {
         match (*self).index_map.get(&index_name) {
-            Some(x) => *x,
-            None => Field::new(0),
+            Some(x) => x.clone(),
+            None => Field::new(),
+        }
+    }
+
+    fn insert_record(&mut self, id: usize, record: &Record) {
+        for i in &record.labelPair {
+            field = self.get(labelPair.key)
+            // TODO get val if exist append id
+            match field.get(&labelPair.val) {
+                Some(x) => [*x, id], -> //TODO transform in Vec
+                None => [id],
+            }
+            field.insert(
+                labelPair.val,
+                //id,
+            )
+            self.insert(labelPair.key, field);
         }
     }
 
@@ -28,38 +71,44 @@ impl Index {
         (*self).index_map.insert(index_name, field);
     }
 }
-
 // https://doc.rust-lang.org/book/ch15-04-rc.html
 // https://doc.rust-lang.org/std/sync/struct.Arc.html
 
-#[derive(Default, Copy, Clone)]
+#[derive(Clone)]
 struct Field {
-    field_map: [usize; 32] //HashMap<String, [usize; 32]>
+    field_map: HashMap<String, [usize; 32]>
 }
 
 impl<'a> Field {
-    fn new(val: usize) -> Field {
-        Field {field_map: [val;32]}
+    fn new() -> Field {
+        Field {field_map: HashMap::new()}
     }
 }
 
 // https://doc.rust-lang.org/std/default/trait.Default.html
 
 fn main() {
-    // Statements here are executed when the compiled binary is called
-
     // Print text to the console
     println!("Hello World!");
+
+    let mut field = Field::new();
+    field.field_map.insert(
+        String::from("banane"),
+        [1; 32],
+    );
 
     let mut index = Index::new();
 
     index.insert(
         String::from("fruit"),
-        Field::new(1),
+        field,
     );
     let result = index.get(String::from("fruit"));
-    println!("{}", result.field_map[0]);
-    assert!(result.field_map == [1; 32], "ok");
+    match result.field_map.get(&String::from("banane")) {
+        Some(x) => println!("{}", x[0]),
+        None => println!("not find"),
+    };
+    // assert!(result.field_map == [1; 32], "ok");
 
     // let mut couleurIndex = HashMap::new();
     // couleurIndex.insert(
