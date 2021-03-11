@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 struct Record {
-    labelPair: Vec<labelPair>,
+    labelPair: Vec<LabelPair>,
 }
 
 #[derive(Clone)]
-struct labelPair {
+struct LabelPair {
     key: String,
     val: String
 }
@@ -20,8 +20,8 @@ impl RecordStore {
         RecordStore {store: Vec::new()}
     }
 
-    fn add(&mut self, record: Record) -> usize {
-        self.store.push(record);
+    fn add(&mut self, record: &Record) -> usize {
+        self.store.push(record.clone());
         self.store.len() -1
     }
 
@@ -36,24 +36,24 @@ impl RecordStore {
 /// Index contains a map of field name to field
 /// A field contains a map of 
 struct Index {
-    index_map: HashMap<String, Field>
+    labelKeyIndex: HashMap<String, Field>
 }
 
 impl Index {
     fn new() -> Index {
-        Index {index_map: HashMap::new()}
+        Index {labelKeyIndex: HashMap::new()}
     }
 
     fn get(&mut self, index_name: String) -> Field {
-        match (*self).index_map.get(&index_name) {
+        match (*self).labelKeyIndex.get(&index_name) {
             Some(x) => x.clone(),
             None => Field::new(),
         }
     }
 
-    fn insert_record(&mut self, id: usize, record: &Record) {
-        for i in &record.labelPair {
-            field = self.get(labelPair.key)
+    fn insert_record(&mut self, id: &usize, record: &Record) {
+        for pair in &record.labelPair {
+            let field = self.labelKeyIndex.get(&pair.key);
             // TODO get val if exist append id
             match field.get(&labelPair.val) {
                 Some(x) => [*x, id], -> //TODO transform in Vec
@@ -68,11 +68,9 @@ impl Index {
     }
 
     fn insert(&mut self, index_name: String, field: Field) {
-        (*self).index_map.insert(index_name, field);
+        (*self).labelKeyIndex.insert(index_name, field);
     }
 }
-// https://doc.rust-lang.org/book/ch15-04-rc.html
-// https://doc.rust-lang.org/std/sync/struct.Arc.html
 
 #[derive(Clone)]
 struct Field {
@@ -91,46 +89,25 @@ fn main() {
     // Print text to the console
     println!("Hello World!");
 
-    let mut field = Field::new();
-    field.field_map.insert(
-        String::from("banane"),
-        [1; 32],
-    );
-
-    let mut index = Index::new();
-
-    index.insert(
-        String::from("fruit"),
-        field,
-    );
-    let result = index.get(String::from("fruit"));
-    match result.field_map.get(&String::from("banane")) {
-        Some(x) => println!("{}", x[0]),
-        None => println!("not find"),
+    let store = RecordStore::new();
+    let index = Index::new();
+    let record1 = Record{
+        labelPair: vec![LabelPair{key: String::from("type"), val: String::from("fruit")}, 
+                        LabelPair{key: String::from("color"), val: String::from("green")},
+                        LabelPair{key: String::from("name"), val: String::from("kiwi")}]
     };
-    // assert!(result.field_map == [1; 32], "ok");
+    let record2 = Record{
+        labelPair: vec![LabelPair{key: String::from("type"), val: String::from("vegetable")}, 
+                        LabelPair{key: String::from("color"), val: String::from("green")},
+                        LabelPair{key: String::from("name"), val: String::from("bean")}]
+    };
+    let id = store.add(&record1);
+    index.insert_record(&id, &record1);
 
-    // let mut couleurIndex = HashMap::new();
-    // couleurIndex.insert(
-    //     "tomate",
-    //     [0; 32],
-    // );
-    // couleurIndex.insert(
-    //     "banane",
-    //     [0; 32],
-    // );
-    // couleurIndex.insert(
-    //     "kiwi",
-    //     [0; 32],
-    // );
-    // index.index_map.insert(
-    //     "fruit",
-    //     fruitIndex,
-    // );
-    // index.index_map.insert(
-    //     "couleur",
-    //     couleurIndex,
-    // );
+    id = store.add(&record2);
+    index.insert_record(&id, &record2);
+}
 
-    // let mut posting_list: [i32; 32] = [0; 32];
+fn generator() {
+
 }
