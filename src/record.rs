@@ -1,8 +1,6 @@
-use std::{collections::HashMap, vec};
-
 #[derive(Clone)]
 pub struct Record {
-    pub labelPair: Vec<LabelPair>,
+    pub label_pair: Vec<LabelPair>,
 }
 
 #[derive(Clone)]

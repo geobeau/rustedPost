@@ -4,17 +4,17 @@ use std::{collections::HashMap};
 /// Index contains a map of field name to field
 /// A field contains a map of 
 pub struct Index {
-    labelKeyIndex: HashMap<String, Field>
+    label_key_index: HashMap<String, Field>
 }
 
 impl Index {
     pub fn new() -> Index {
-        Index {labelKeyIndex: HashMap::new()}
+        Index {label_key_index: HashMap::new()}
     }
 
     pub fn search(&mut self, record: record::Record) {
-        let t = record.labelPair.into_iter().map(|pair| {
-            (pair.val, self.labelKeyIndex.get(&pair.key))
+        let t = record.label_pair.into_iter().map(|pair| {
+            (pair.val, self.label_key_index.get(&pair.key))
         });
         t.filter(|val| {
             !val.1.is_none()
@@ -28,8 +28,8 @@ impl Index {
     }
 
     pub fn insert_record(&mut self, id: usize, record: &record::Record) {
-        for pair in &record.labelPair {
-            let field = self.labelKeyIndex.entry(pair.key.clone()).or_insert(Field::new());
+        for pair in &record.label_pair {
+            let field = self.label_key_index.entry(pair.key.clone()).or_insert(Field::new());
             field.add_posting(pair.val.clone(), id);
         }
     }
