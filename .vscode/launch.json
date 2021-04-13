@@ -5,24 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Launch",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "enter program name, for example ${workspaceFolder}/a.out",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb"
-        },
-        {
             "name": "(OSX) Launch",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/rustedPost",
             "args": [],
             "cwd": "${workspaceRoot}",
+            "logging": {
+                "engineLogging": true
+            }
         }
-    ]
+    ],
+
 }
