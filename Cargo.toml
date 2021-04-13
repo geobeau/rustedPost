@@ -1,5 +1,5 @@
 [package]
-name = "RustedPost"
+name = "rusted_post"
 version = "0.1.0"
 authors = ["Geoffrey Beausire <g.beausire@criteo.com>"]
 edition = "2018"
