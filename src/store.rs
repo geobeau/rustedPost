@@ -14,10 +14,14 @@ impl RecordStore {
         self.store.len() -1
     }
 
-    pub fn get(&mut self, index: usize) -> Option<record::Record> {
-        match self.store.get(index) {
+    pub fn get(&self, id: usize) -> Option<record::Record> {
+        match self.store.get(id) {
             Some(x) => Some(x.clone()),
             None => None,
         }
+    }
+
+    pub fn multi_get(&self, ids: Vec<usize>) -> Vec<record::Record> {
+        ids.into_iter().filter_map(|id| self.get(id)).collect()
     }
 }
