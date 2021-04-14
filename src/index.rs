@@ -1,5 +1,6 @@
 use super::record;
 use std::{collections::HashMap};
+use iter_set::intersection;
 
 /// Index contains a map of field name to field
 /// A field contains a map of 
@@ -12,19 +13,23 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn search(&mut self, record: record::Record) {
-        let t = record.label_pair.into_iter().map(|pair| {
-            (pair.val, self.label_key_index.get(&pair.key))
+    pub fn search(&mut self, record: record::Record) -> Vec<usize> {
+        let mut t = record.label_pair.into_iter().filter_map(|pair| {
+            match self.label_key_index.get(&pair.key) {
+                Some(field) => Some((pair.val, field)),
+                None => None
+            }
+        }).filter_map(|q| {
+            let field = q.1;
+            field.field_map.get(&q.0)
         });
-        t.filter(|val| {
-            !val.1.is_none()
-        });
-        // .filter field not None // TODO
-        // .map(|(val, field)| {
-        //     field.field_map.get(val)
-        // });
-        println!("ok");
-        //.reduce(intesection)
+        let last = t.next_back();
+        if last.is_none() {
+            return Vec::new();
+        }
+        t.fold(last.unwrap().clone(), |a, b| {
+            intersection(&a, b).map(|a| a.clone()).collect()
+        })
     }
 
     pub fn insert_record(&mut self, id: usize, record: &record::Record) {
