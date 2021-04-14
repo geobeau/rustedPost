@@ -28,5 +28,5 @@ fn main() {
     let record_search = record::Record{
         label_pair: vec![record::LabelPair{key: String::from("color"), val: String::from("green")}]
     };
-    index.search(record_search)
+    index.search(record_search);
 }
