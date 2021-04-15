@@ -1,4 +1,5 @@
 use super::record;
+use std::rc::Rc;
 mod store;
 mod index;
 
@@ -22,11 +23,7 @@ impl StorageBackend {
         return id
     }
 
-    pub fn get(&self, record: &record::Record) -> Option<record::Record> {
-        Some(record)
-    }
-
-    pub fn search(&self, search_query: record::Record) -> Vec<record::Record> {
+    pub fn search(&self, search_query: record::Record) -> Vec<&Rc<record::Record>> {
         self.store.multi_get(self.index.search(search_query))
     }
 
