@@ -13,7 +13,7 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn search(&mut self, record: record::Record) -> Vec<usize> {
+    pub fn search(&self, record: record::Record) -> Vec<usize> {
         let mut t = record.label_pair.into_iter().filter_map(|pair| {
             match self.label_key_index.get(&pair.key) {
                 Some(field) => Some((pair.val, field)),
