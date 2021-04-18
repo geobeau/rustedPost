@@ -25,7 +25,7 @@ fn main() {
         label_pair: vec![record::LabelPair{key: String::from("author_name"), val: String::from("Tolkien")}]
     };
     let mut records = storage.search(record_search);
-    println!("Search 1 (tolkien): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
+    println!("Search 1 (Tolkien): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
     record_search = record::Record{
@@ -33,7 +33,7 @@ fn main() {
                          record::LabelPair{key: String::from("language"), val: String::from("English")}]
     };
     records = storage.search(record_search);
-    println!("Search 2 (tolken in English): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
+    println!("Search 2 (Tolkien in English): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
     record_search = record::Record{
@@ -42,5 +42,5 @@ fn main() {
                          record::LabelPair{key: String::from("extension"), val: String::from("pdf")}]
     };
     records = storage.search(record_search);
-    println!("Search 2 (tolken in English): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
+    println!("Search 2 (Tolkien in English and as pdf): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 }
