@@ -55,3 +55,37 @@ impl<'a> Field {
         posting_list.push(id);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn load_test_data(index: &mut Index) {
+        index.insert_record(0, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}, record::LabelPair{key: String::from("keyc"), val: String::from("val3")}]});
+        index.insert_record(1, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val2")}, record::LabelPair{key: String::from("keyc"), val: String::from("val2")}]});
+        index.insert_record(2, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}, record::LabelPair{key: String::from("keyc"), val: String::from("val1")}]});
+    } 
+
+    #[test]
+    fn it_works() {
+        let mut index = Index::new();
+        load_test_data(&mut index);
+
+        let mut result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}]});
+        assert_eq!(result, vec![0, 1, 2]);
+        result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
+        assert_eq!(result, vec![0, 2]);
+    }
+
+    #[test]
+    fn it_intersects() {
+        let mut index = Index::new();
+        load_test_data(&mut index);
+
+        let mut result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keya"), val: String::from("val1")}]});
+        assert_eq!(result, vec![0, 1, 2]);
+        result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
+        assert_eq!(result, vec![0, 2]);
+        result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keyc"), val: String::from("val3")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
+        assert_eq!(result, vec![0]);
+    }
+}
