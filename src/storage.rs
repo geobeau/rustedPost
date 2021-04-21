@@ -17,10 +17,15 @@ impl StorageBackend {
         }
     }
 
-    pub fn add(&mut self, record: &record::Record) -> usize {
+    pub fn add(&mut self, record: &record::Record) -> Option<usize> {
         let id = self.store.add(&record);
-        self.index.insert_record(id, &record);
-        return id
+        match id {
+            Some(id) => {
+                self.index.insert_record(id, &record);
+                Some(id)
+            }
+            _ => None
+        }
     }
 
     pub fn search(&self, search_query: record::Record) -> Vec<&Rc<record::Record>> {
