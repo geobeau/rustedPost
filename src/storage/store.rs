@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::rc::Rc;
 
 use super::record;
@@ -11,8 +11,9 @@ pub struct RecordStore {
 impl RecordStore {
     pub fn new() -> RecordStore {
         RecordStore {
-            id_store: Vec::new(),
-            hash_store: HashMap::new()
+            // TODO: Guess a good capacity instead of hardcording one
+            id_store: Vec::with_capacity(2_000_000),
+            hash_store: HashMap::with_capacity(2_000_000)
         }
     }
 

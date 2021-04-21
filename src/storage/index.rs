@@ -1,5 +1,5 @@
 use super::record;
-use std::{collections::HashMap};
+use hashbrown::HashMap;
 use iter_set::intersection;
 
 /// Index contains a map of field name to field
