@@ -26,7 +26,7 @@ if not os.path.isfile('data/book_dataset.sqlite'):
 
     print(f"Finished::: Ingested {total} lines")
 
-COL = ["author_family_name", "author_name", "author_surname", "language", "year", "extension", "title", "publisher", "edition"]
+COL = ["author_family_name", "author_first_name", "author_surname", "language", "year", "extension", "title", "publisher", "edition"]
 
 with open('data/dataset.txt', 'w') as dataset:
     print("Generating the dataset file from sqlite")
