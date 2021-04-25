@@ -28,7 +28,7 @@ impl StorageBackend {
         }
     }
 
-    pub fn search(&self, search_query: record::Record) -> Vec<&Rc<record::Record>> {
+    pub fn search(&self, search_query: record::SearchQuery) -> Vec<&Rc<record::Record>> {
         self.store.multi_get(self.index.search(search_query))
     }
 

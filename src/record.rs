@@ -4,17 +4,8 @@ use std::{cmp::Eq};
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Record {
-    pub label_pair: Vec<LabelPair>,
+    pub label_pairs: Vec<LabelPair>,
 }
-
-
-// impl Record {
-//     pub fn new(labels: Vec<LabelPair>) -> Record {
-//         Record {
-//             label_pair: labels,
-//         }
-//     }
-// }
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LabelPair {
@@ -29,4 +20,38 @@ impl LabelPair {
             val: Box::from(val),
         }
     }
+}
+
+pub struct SearchQuery {
+    pub search_fields: Vec<SearchField>,
+}
+
+pub struct SearchField {
+    pub key: Box<str>,
+    pub val: Box<str>,
+    pub op: Operation,
+}
+
+impl SearchField {
+    pub fn newEq(key: &str, val: &str) -> SearchField {
+        SearchField {
+            key: Box::from(key),
+            val: Box::from(val),
+            op: Operation::Eq,
+        }
+    }
+
+    pub fn newRe(key: &str, val: &str) -> SearchField {
+        SearchField {
+            key: Box::from(key),
+            val: Box::from(val),
+            op: Operation::Re,
+        }
+    }
+}
+
+
+pub enum Operation {
+    Eq,
+    Re
 }

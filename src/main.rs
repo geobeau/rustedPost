@@ -26,25 +26,25 @@ fn main() {
     println!("Loaded {} out of {} lines in {}ms", success_count, total_count, now.elapsed().as_millis());
 
     now = Instant::now();
-    let mut record_search = record::Record{
-        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien")]
+    let mut record_search = record::SearchQuery{
+        search_fields: vec![record::SearchField::newEq("author_family_name", "Tolkien")]
     };
     let mut records = storage.search(record_search);
     println!("Search 1 (Tolkien): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
-    record_search = record::Record{
-        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien"),
-                         record::LabelPair::new("language", "English")]
+    record_search = record::SearchQuery{
+        search_fields: vec![record::SearchField::newEq("author_family_name", "Tolkien"),
+                            record::SearchField::newEq("language", "English")]
     };
     records = storage.search(record_search);
     println!("Search 2 (Tolkien in English): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
-    record_search = record::Record{
-        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien"),
-                         record::LabelPair::new("language", "English"),
-                         record::LabelPair::new("extension", "pdf")]
+    record_search = record::SearchQuery{
+        search_fields: vec![record::SearchField::newEq("author_family_name", "Tolkien"),
+                            record::SearchField::newEq("language", "English"),
+                            record::SearchField::newEq("extension", "pdf")]
     };
     records = storage.search(record_search);
     println!("Search 2 (Tolkien in English and as pdf): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());

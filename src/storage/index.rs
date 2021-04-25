@@ -13,10 +13,10 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn search(&self, record: record::Record) -> Vec<usize> {
-        let mut t = record.label_pair.into_iter().filter_map(|pair| {
-            match self.label_key_index.get(&pair.key) {
-                Some(field) => Some((pair.val, field)),
+    pub fn search(&self, query: record::SearchQuery) -> Vec<usize> {
+        let mut t = query.search_fields.into_iter().filter_map(|query| {
+            match self.label_key_index.get(&query.key) {
+                Some(field) => Some((query.val, field)),
                 None => None
             }
         }).filter_map(|q| {
@@ -33,7 +33,7 @@ impl Index {
     }
 
     pub fn insert_record(&mut self, id: usize, record: &record::Record) {
-        for pair in &record.label_pair {
+        for pair in &record.label_pairs {
             let field = self.label_key_index.entry(pair.key.clone()).or_insert(Field::new());
             field.add_posting(pair.val.clone(), id);
         }
@@ -56,36 +56,36 @@ impl<'a> Field {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     fn load_test_data(index: &mut Index) {
-//         index.insert_record(0, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}, record::LabelPair{key: String::from("keyc"), val: String::from("val3")}]});
-//         index.insert_record(1, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val2")}, record::LabelPair{key: String::from("keyc"), val: String::from("val2")}]});
-//         index.insert_record(2, &record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}, record::LabelPair{key: String::from("keyc"), val: String::from("val1")}]});
-//     } 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn load_test_data(index: &mut Index) {
+        index.insert_record(0, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val1"), record::LabelPair::new("keyc", "val3")]});
+        index.insert_record(1, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val2"), record::LabelPair::new("keyc", "val2")]});
+        index.insert_record(2, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val1"), record::LabelPair::new("keyc", "val1")]});
+    } 
 
-//     #[test]
-//     fn it_works() {
-//         let mut index = Index::new();
-//         load_test_data(&mut index);
+    #[test]
+    fn it_works() {
+        let mut index = Index::new();
+        load_test_data(&mut index);
 
-//         let mut result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}]});
-//         assert_eq!(result, vec![0, 1, 2]);
-//         result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
-//         assert_eq!(result, vec![0, 2]);
-//     }
+        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1")]});
+        assert_eq!(result, vec![0, 1, 2]);
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keyb", "val1")]});
+        assert_eq!(result, vec![0, 2]);
+    }
 
-//     #[test]
-//     fn it_intersects() {
-//         let mut index = Index::new();
-//         load_test_data(&mut index);
+    #[test]
+    fn it_intersects() {
+        let mut index = Index::new();
+        load_test_data(&mut index);
 
-//         let mut result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keya"), val: String::from("val1")}]});
-//         assert_eq!(result, vec![0, 1, 2]);
-//         result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keya"), val: String::from("val1")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
-//         assert_eq!(result, vec![0, 2]);
-//         result = index.search(record::Record{label_pair: vec![record::LabelPair{key: String::from("keyc"), val: String::from("val3")}, record::LabelPair{key: String::from("keyb"), val: String::from("val1")}]});
-//         assert_eq!(result, vec![0]);
-//     }
-// }
+        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1"), record::SearchField::newEq("keya", "val1")]});
+        assert_eq!(result, vec![0, 1, 2]);
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1"), record::SearchField::newEq("keyb", "val1")]});
+        assert_eq!(result, vec![0, 2]);
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keyc", "val3"), record::SearchField::newEq("keyb", "val1")]});
+        assert_eq!(result, vec![0]);
+    }
+}
