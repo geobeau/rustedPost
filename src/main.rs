@@ -2,6 +2,8 @@ use std::vec;
 use std::time::{Instant};
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::rc::Rc;
+
 
 mod record;
 mod storage;
@@ -16,7 +18,7 @@ fn main() {
     let mut success_count = 0;
     let file = File::open("data/dataset.txt").unwrap();
     io::BufReader::new(file).lines().for_each(|line| {
-        let id = storage.add(&serde_json::from_str(&line.unwrap()).unwrap());
+        let id = storage.add(Rc::new(serde_json::from_str(&line.unwrap()).unwrap()));
         if id.is_some() {
             success_count += 1;
         }
@@ -47,4 +49,7 @@ fn main() {
     };
     records = storage.search(record_search);
     println!("Search 2 (Tolkien in English and as pdf): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
+    println!("Sleeping 10s before exiting (for memory usage snapshots)");
+
+    std::thread::sleep(std::time::Duration::from_secs(10))
 }
