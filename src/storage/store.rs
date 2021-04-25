@@ -21,7 +21,7 @@ impl RecordStore {
         let r = Rc::new(record.clone());
         let result = self.hash_store.get(&r);
         match result {
-            Some(record) => None,
+            Some(_record) => None,
             _ => {
                 self.id_store.push(r.clone());
                 let id = self.id_store.len() -1;

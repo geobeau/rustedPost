@@ -7,11 +7,11 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn new(labels: Vec<LabelPair>) -> Record {
-        Record {
-            label_pair: labels,
-        }
-    }
+    // pub fn new(labels: Vec<LabelPair>) -> Record {
+    //     Record {
+    //         label_pair: labels,
+    //     }
+    // }
 }
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
