@@ -4,7 +4,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::rc::Rc;
 
-
 mod record;
 mod storage;
 
@@ -28,28 +27,28 @@ fn main() {
 
     now = Instant::now();
     let mut record_search = record::Record{
-        label_pair: vec![record::LabelPair{key: String::from("author_family_name"), val: String::from("Tolkien")}]
+        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien")]
     };
     let mut records = storage.search(record_search);
     println!("Search 1 (Tolkien): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
     record_search = record::Record{
-        label_pair: vec![record::LabelPair{key: String::from("author_family_name"), val: String::from("Tolkien")},
-                         record::LabelPair{key: String::from("language"), val: String::from("English")}]
+        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien"),
+                         record::LabelPair::new("language", "English")]
     };
     records = storage.search(record_search);
     println!("Search 2 (Tolkien in English): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
 
     now = Instant::now();
     record_search = record::Record{
-        label_pair: vec![record::LabelPair{key: String::from("author_family_name"), val: String::from("Tolkien")},
-                         record::LabelPair{key: String::from("language"), val: String::from("English")},
-                         record::LabelPair{key: String::from("extension"), val: String::from("pdf")}]
+        label_pair: vec![record::LabelPair::new("author_family_name", "Tolkien"),
+                         record::LabelPair::new("language", "English"),
+                         record::LabelPair::new("extension", "pdf")]
     };
     records = storage.search(record_search);
     println!("Search 2 (Tolkien in English and as pdf): yielded {:?} results in {}us", records.len(), now.elapsed().as_micros());
-    println!("Sleeping 10s before exiting (for memory usage snapshots)");
+    println!("Sleeping 60s before exiting (for memory usage snapshots)");
 
-    std::thread::sleep(std::time::Duration::from_secs(10))
+    std::thread::sleep(std::time::Duration::from_secs(60))
 }
