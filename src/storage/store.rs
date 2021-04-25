@@ -17,15 +17,14 @@ impl RecordStore {
         }
     }
 
-    pub fn add(&mut self, record: &record::Record) -> Option<usize> {
-        let r = Rc::new(record.clone());
-        let result = self.hash_store.get(&r);
+    pub fn add(&mut self, record: &Rc<record::Record>) -> Option<usize> {
+        let result = self.hash_store.get(record);
         match result {
             Some(_record) => None,
             _ => {
-                self.id_store.push(r.clone());
+                self.id_store.push(record.clone());
                 let id = self.id_store.len() -1;
-                self.hash_store.insert(r, id);
+                self.hash_store.insert(record.clone(), id);
                 Some(id)
             }
         }

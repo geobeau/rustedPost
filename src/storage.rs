@@ -17,7 +17,7 @@ impl StorageBackend {
         }
     }
 
-    pub fn add(&mut self, record: &record::Record) -> Option<usize> {
+    pub fn add(&mut self, record: Rc<record::Record>) -> Option<usize> {
         let id = self.store.add(&record);
         match id {
             Some(id) => {

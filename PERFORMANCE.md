@@ -1,5 +1,7 @@
 #  Baseline
 
+The code is always compiled with optimization at 3 and debug info.
+
 Computer used:
 * MacBook Pro 2017
 * 2,8 GHz Quad-Core Intel Core i7
@@ -12,6 +14,11 @@ Search 2 (Tolkien in English): yielded 724 results in 15_123us
 Search 2 (Tolkien in English and as pdf): yielded 78 results in 6_229us
 ```
 
+Memory usage is computed by running (output is in GiB or MiB):
+```
+ps x -o rss,vsz,command | grep -i target/debug/rusted_post | grep -v grep | numfmt --from-unit=1024 --to=iec --field 1-2
+```
+
 # Multithreading
 
 The code is single threaded. The reason is that if clustering is added, one
@@ -21,10 +28,25 @@ benefiting from data locality and being lock free.
 
 # Ingestion
 
-Ingestion takes 1s per 100 000 records. Right now the serialisation is done with
+Ingestion takes 1s per 100 000 records. 
+
+## Serialization
+
+Right now the serialisation is done with
 JSON which is not the most efficient, doing it with a binary format would yield better result.
 However, serialisation takes only ~20% of cpu usage and JSON has the benefit of being human
 readable and writable so it's good enough for now.
+
+## Datastructures & copy
+
+First optimisation is to use https://github.com/rust-lang/hashbrown instead of the std hashmap.
+The main benefit for ingestion seems to the faster hash function, it helps reducing ingestion time
+by ~10% (from 18s to 16s) without downsides.
+
+Second optimisation is avoid copying data. A record is stored as a RC record in the heap and we
+just move the reference around.
+
+
 
 
 
