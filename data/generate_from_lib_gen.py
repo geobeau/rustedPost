@@ -37,7 +37,7 @@ with open('data/dataset.txt', 'w') as dataset:
         pairs = []
         for i in range(len(COL)):
             pairs.append({"key":COL[i],"val": line[i]})
-        dataset.write(json.dumps({"label_pair":pairs}) + "\n")
+        dataset.write(json.dumps({"label_pairs":pairs}) + "\n")
         line = curDst.fetchone()
         total += 1
         if total % 10000 == 0:
