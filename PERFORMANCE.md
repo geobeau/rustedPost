@@ -26,6 +26,15 @@ possible implementation is to shard the data and have a single server host
 multiple shard. Shards would then be pinned to a specific CPU, hopefully 
 benefiting from data locality and being lock free.
 
+# Memory usage
+
+Going from `String` to `Box<str>` reduced memory usage by 25% (2.6GiB to 2.0GiB).
+
+TODO:
+In a record we store a key and a label. The key is dynamic but it may have low cardinality compared
+to values (`author_name` should be much more common than `tolkien`). So instead of repeating
+it many times we can declare the key as a RC and store them into an hashmap somewhere.
+
 # Ingestion
 
 Ingestion takes 1s per 100 000 records. 
