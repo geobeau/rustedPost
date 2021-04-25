@@ -14,12 +14,18 @@ impl Index {
     }
 
     pub fn search(&self, query: record::SearchQuery) -> Vec<usize> {
-        let mut t = query.search_fields.into_iter().filter_map(|query| {
+        let key_iter: Option<Vec<_>> = query.search_fields.into_iter().map(|query| {
             match self.label_key_index.get(&query.key) {
                 Some(field) => Some((query.val, field)),
                 None => None
             }
-        }).filter_map(|q| {
+        }).collect();
+
+        if key_iter.is_none() {
+            return Vec::new();
+        }
+
+        let mut t = key_iter.unwrap().into_iter().filter_map(|q| {
             let field = q.1;
             field.field_map.get(&q.0)
         });
@@ -70,9 +76,9 @@ mod tests {
         let mut index = Index::new();
         load_test_data(&mut index);
 
-        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1")]});
+        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::new_eq("keya", "val1")]});
         assert_eq!(result, vec![0, 1, 2]);
-        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keyb", "val1")]});
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::new_eq("keyb", "val1")]});
         assert_eq!(result, vec![0, 2]);
     }
 
@@ -81,11 +87,11 @@ mod tests {
         let mut index = Index::new();
         load_test_data(&mut index);
 
-        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1"), record::SearchField::newEq("keya", "val1")]});
+        let mut result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::new_eq("keya", "val1"), record::SearchField::new_eq("keya", "val1")]});
         assert_eq!(result, vec![0, 1, 2]);
-        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keya", "val1"), record::SearchField::newEq("keyb", "val1")]});
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::new_eq("keya", "val1"), record::SearchField::new_eq("keyb", "val1")]});
         assert_eq!(result, vec![0, 2]);
-        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::newEq("keyc", "val3"), record::SearchField::newEq("keyb", "val1")]});
+        result = index.search(record::SearchQuery{search_fields: vec![record::SearchField::new_eq("keyc", "val3"), record::SearchField::new_eq("keyb", "val1")]});
         assert_eq!(result, vec![0]);
     }
 }

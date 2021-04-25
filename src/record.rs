@@ -33,7 +33,7 @@ pub struct SearchField {
 }
 
 impl SearchField {
-    pub fn newEq(key: &str, val: &str) -> SearchField {
+    pub fn new_eq(key: &str, val: &str) -> SearchField {
         SearchField {
             key: Box::from(key),
             val: Box::from(val),
@@ -41,7 +41,7 @@ impl SearchField {
         }
     }
 
-    pub fn newRe(key: &str, val: &str) -> SearchField {
+    pub fn new_re(key: &str, val: &str) -> SearchField {
         SearchField {
             key: Box::from(key),
             val: Box::from(val),
