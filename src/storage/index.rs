@@ -1,6 +1,8 @@
 use super::record;
 use hashbrown::HashMap;
-use iter_set::intersection;
+use std::{collections::BTreeMap};
+use iter_set;
+use regex::Regex;
 
 /// Index contains a map of field name to field
 /// A field contains a map of 
@@ -14,27 +16,33 @@ impl Index {
     }
 
     pub fn search(&self, query: record::SearchQuery) -> Vec<usize> {
-        let key_iter: Option<Vec<_>> = query.search_fields.into_iter().map(|query| {
+        // TODO: generate a result instead of empty vec
+
+        // Key search phase
+        // Get the list of possible values from the index for each keys
+        let key_search: Option<Vec<_>> = query.search_fields.into_iter().map(|query| {
             match self.label_key_index.get(&query.key) {
-                Some(field) => Some((query.val, field)),
+                Some(field) => Some((query, field)),
                 None => None
             }
         }).collect();
 
-        if key_iter.is_none() {
+        if key_search.is_none() {
             return Vec::new();
         }
 
-        let mut t = key_iter.unwrap().into_iter().filter_map(|q| {
-            let field = q.1;
-            field.field_map.get(&q.0)
+        let mut t = key_search.unwrap().into_iter().filter_map(|q| {
+            match q.0.op {
+                record::Operation::Re => q.1.re_aggregated_get(&q.0),
+                record::Operation::Eq => q.1.eq_get(&q.0)
+            }
         });
         let last = t.next_back();
         if last.is_none() {
             return Vec::new();
         }
-        t.fold(last.unwrap().clone(), |a, b| {
-            intersection(&a, b).map(|a| a.clone()).collect()
+        t.fold((*last.unwrap()).to_vec().clone(), |a, b| {
+            iter_set::intersection(&a, &b).map(|a| a.clone()).collect()
         })
     }
 
@@ -48,17 +56,36 @@ impl Index {
 
 #[derive(Clone)]
 struct Field {
-    field_map: HashMap<Box<str>, Vec<usize>>
+    field_map: BTreeMap<Box<str>, Vec<usize>>
 }
 
 impl<'a> Field {
     fn new() -> Field {
-        Field {field_map: HashMap::new()}
+        Field {field_map: BTreeMap::new()}
     }
 
     fn add_posting(&mut self, key: Box<str>, id: usize) {
         let posting_list = self.field_map.entry(key).or_insert(Vec::new());
         posting_list.push(id);
+    }
+
+    fn re_aggregated_get(&self, field_query: &record::SearchField) -> Option<Vec<usize>> {
+        // TODO: generate a result instead of option
+        let re = Regex::new(&field_query.val).unwrap();
+        Some((&self.field_map).into_iter().fold( Vec::new(), |a, b| {
+            if re.is_match(&b.0) {
+                let res = iter_set::union(&a, b.1).map(|a| a.clone()).collect();
+                return res
+            }
+            a
+        }))
+    }
+
+    fn eq_get(&self, field_query: &record::SearchField) -> Option<Vec<usize>> {
+        match self.field_map.get(&*field_query.val) {
+            Some(list) => Some(list.clone()),
+            None => None
+        }
     }
 }
 
