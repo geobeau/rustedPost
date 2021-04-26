@@ -11,7 +11,7 @@ mod storage;
 fn display_timed_query(storage: &storage::StorageBackend, query: &record::SearchQuery) {
     let now = Instant::now();
     let records = storage.search(query);
-    println!("Search 1 ({}): yielded {} results in {}us ({}ms)", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis());
+    println!("Searching ({}): yielded {} results in {}us ({}ms)", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis());
 }
 
 fn main() {
