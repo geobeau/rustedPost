@@ -3,7 +3,6 @@ use std::rc::Rc;
 mod store;
 mod index;
 
-
 pub struct StorageBackend {
     store: store::RecordStore,
     index: index::Index

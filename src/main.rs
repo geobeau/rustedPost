@@ -3,9 +3,9 @@ use std::time::{Instant};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::rc::Rc;
-
 mod record;
 mod storage;
+mod regex_optimizer;
 
 
 fn display_timed_query(storage: &storage::StorageBackend, query: &record::SearchQuery) {
@@ -20,6 +20,11 @@ fn main() {
     let mut total_count = 0;
     let mut success_count = 0;
     let file = File::open("data/dataset.txt").unwrap();
+    regex_optimizer::optimize("aaa");
+    regex_optimizer::optimize("a{3}");
+    regex_optimizer::optimize("^[sS]il.*");
+    regex_optimizer::optimize("marillion.*^");
+    return
     io::BufReader::new(file).lines().for_each(|line| {
         let id = storage.add(Rc::new(serde_json::from_str(&line.unwrap()).unwrap()));
         if id.is_some() {
