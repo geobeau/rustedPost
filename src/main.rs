@@ -125,6 +125,16 @@ fn main() {
         record::QueryFlags::empty(),
     ));
 
+    display_timed_query(&storage, &record::SearchQuery::new(vec![
+        record::SearchField::new_eq("author_family_name", "Tolstoy"),
+        record::SearchField::new_re("title", "Anna Karénine")]
+    ));
+
+    display_timed_query(&storage, &record::SearchQuery::new(vec![
+        record::SearchField::new_eq("author_family_name", "Tolstoy"),
+        record::SearchField::new_eq("title", "Anna Karénine")]
+    ));   
+
     println!("Sleeping 60s before exiting (for memory usage snapshots)");
 
     std::thread::sleep(std::time::Duration::from_secs(60))
