@@ -82,8 +82,53 @@ The HIR as method to extract a list of literrals which can be marked as Cut (pre
 
 We then can do a sub range query over the values using the prefixes or match direcly using the exact matches.
 
+### Prefix optimization
+
+In this example, we are searching for the book Anna Karenina from Tolstoy. To account for different writing styles (Anna is ana
+in spanish and Karenina is spelled Karénine in French), we use the following regex: `"A[n]?na.*`.
 
 
+```
+[2021-04-28T21:27:21][DEBUG][src\storage\index.rs:123] Searched with A[n]?na.* over 954990 values, matched 706 (ratio 0.0007392747568037362)
+[2021-04-28T21:27:21][INFO][src\main.rs:17] Searching (author_family_name=="Tolstoy", title=~"A[n]?na.*"): yielded 40 results in 94065us (94ms) (optimized: false)
+```
 
+The naive (non optimized version) is quite slow (94ms). We had to loop over 1M book titles trying to match each with our regex.
+
+```
+[2021-04-28T21:27:21][DEBUG][src\storage\index.rs:83] Running query in optimized mod
+[2021-04-28T21:27:21][DEBUG][src\storage\index.rs:86] Search for Anna (cut:true)
+[2021-04-28T21:27:21][DEBUG][src\storage\index.rs:86] Search for Ana (cut:true)
+[2021-04-28T21:27:21][DEBUG][src\storage\index.rs:123] Searched with A[n]?na.* over 706 values, matched 706 (ratio 1)
+[2021-04-28T21:27:21][INFO][src\main.rs:17] Searching (author_family_name=="Tolstoy", title=~"A[n]?na.*"): yielded 40 results in 2116us (2ms) (optimized: true)
+```
+
+The optimized version is much faster (2ms). The magic is done because the optimizer is able to see that we can extract
+two prefix (cut mean that it's not an exact match). With the two prefix we can do a range search on the tittles (they
+are in a BTreeMap instead of a Hashmap for this purpose). In our case we interated over 706 titles and they all matched.
+
+### Exact match optimization
+
+For this example we will only search for Tolkien but account for lowercase as well: `[tT]olkien`
+
+
+```
+[2021-04-28T21:39:59][DEBUG][src\storage\index.rs:123] Searched with [tT]olkien over 99779 values, matched 2 (ratio 0.000020044297898355367)
+[2021-04-28T21:39:59][INFO][src\main.rs:17] Searching (author_family_name=~"[tT]olkien"): yielded 1319 results in 9376us (9ms) (optimized: false)
+```
+
+The naive (non optimized version) is rather fast (10ms) but we still had to loop over 100k author names trying
+to find something matching the regex.
+
+```
+[2021-04-28T21:39:59][DEBUG][src\storage\index.rs:83] Running query in optimized mod
+[2021-04-28T21:39:59][DEBUG][src\storage\index.rs:86] Search for Tolkien (cut:false)
+[2021-04-28T21:39:59][DEBUG][src\storage\index.rs:86] Search for tolkien (cut:false)
+[2021-04-28T21:39:59][DEBUG][src\storage\index.rs:123] Searched with [tT]olkien over 2 values, matched 2 (ratio 1)
+[2021-04-28T21:39:59][INFO][src\main.rs:17] Searching (author_family_name=~"[tT]olkien"): yielded 1319 results in 718us (0ms) (optimized: true)
+```
+
+The optimized version is even faster (0.7ms). The optimizer saw that the regex could be described
+as two exacts matches, bypassing the need for a range search at all.
 
 

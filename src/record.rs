@@ -37,6 +37,12 @@ impl SearchQuery {
             query_flags: QueryFlags::DEFAULT
         }
     }
+    pub fn new_with_flags(search_fields: Vec<SearchField>, flags: QueryFlags) -> SearchQuery {
+        SearchQuery {
+            search_fields: search_fields,
+            query_flags:flags
+        }
+    }
 }
 
 impl fmt::Display for SearchQuery {
