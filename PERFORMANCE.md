@@ -131,4 +131,21 @@ to find something matching the regex.
 The optimized version is even faster (0.7ms). The optimizer saw that the regex could be described
 as two exacts matches, bypassing the need for a range search at all.
 
+The last advantage is when you mistakenly use regex search with a non regex field:
+```
+# Using a non regex regex search
+[2021-04-28T22:28:16][INFO][src\main.rs:17] Searching (author_family_name=="Tolstoy", title=~"Anna Karénine"): yielded 1 results in 92837us (92ms) (optimized: false)
+
+# With optimization on
+[2021-04-28T22:28:16][DEBUG][src\storage\index.rs:83] Running query in optimized mod
+[2021-04-28T22:28:16][DEBUG][src\storage\index.rs:86] Search for Anna Karénine (cut:false)
+[2021-04-28T22:28:16][DEBUG][src\storage\index.rs:123] Searched with Anna Karénine over 1 values, matched 1 (ratio 1)
+[2021-04-28T22:28:16][INFO][src\main.rs:17] Searching (author_family_name=="Tolstoy", title=~"Anna Karénine"): yielded 1 results in 528us (0ms) (optimized: true)
+
+# Using exact match instead of regex
+[2021-04-28T22:28:16][INFO][src\main.rs:17] Searching (author_family_name=="Tolstoy", title=="Anna Karénine"): yielded 1 results in 5us (0ms) (optimized: true)
+```
+
+The regex have you covered for a minor performance price ;) (500us instead of 5us, still much better than 92ms)
+
 
