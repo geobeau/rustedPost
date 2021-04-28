@@ -74,29 +74,39 @@ impl<'a> Field {
 
     fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> Option<Vec<usize>> {
         // TODO: generate a result instead of option
-        let re = Regex::new(&field_query.val).unwrap();
+        let re = Regex::new(format!("^{}$", &field_query.val).as_str()).unwrap();
         let mut count = 0;
         let mut matched = 0;
         let result: Vec<usize>;
-        if flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH) {
-            let lit = optimize_regex(&field_query.val);
-            result = lit.into_iter().fold( Vec::new(), |a, b| {
-                // If the literal is a prefix
-                if b.0 {
-                    let fields = (&self.field_map).range(b.1..)
-                    .take_while(|(k, _)| k.into_string().starts_with(&b.1.into_string()))
-                    .fold(a, |a, b| {
+        let optimized_fields = optimize_regex(&field_query.val);
+        if flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH) && !optimized_fields.is_empty() {
+            debug!("Running query in optimized mod");
+            result = optimized_fields.into_iter()
+            .fold(Vec::new(), |res, lit| {
+                debug!("Search for {} (cut:{})", lit.1, lit.0);
+                if lit.0 {
+                    // If it's a prefix do a range search and fold along the way
+                    (&self.field_map).range(lit.1.clone()..)
+                    .take_while(|(k, _)| (**k).starts_with(&*lit.1.clone()))
+                    .fold(res, |sub_res, b| {
+                        count += 1;
                         if re.is_match(&b.0) {
-                            let res = iter_set::union(&a, b.1).map(|a| a.clone()).collect();
+                            let u = iter_set::union(&sub_res, b.1).map(|x| x.clone()).collect();
                             matched += 1;
-                            return res
+                            return u
                         }
-                        a
-                    });
-                    fields
+                        sub_res
+                    })
                 } else {
-                    a
-                }
+                    count += 1;
+                    matched += 1;
+                    // If it's an exact match do a simple get
+                    match self.field_map.get(&*lit.1) {
+                        Some(list) => iter_set::union(&res, list).map(|x| x.clone()).collect(),
+                        None => res
+                    }
+                    
+                }  
             });
         } else {
             result = (&self.field_map).into_iter().fold( Vec::new(), |a, b| {
@@ -132,7 +142,7 @@ pub fn optimize_regex(regex: &str) -> Vec<(bool, Box<str>)> {
     Literals::prefixes(&hir).literals().into_iter().map(|l| {
         // I didn't find a better way :'(, everything is private
         let re = if l.is_cut() {&re_cut} else {&re_complete};
-        (l.is_cut(), Box::from(re.captures(format!("{:?}", l).as_str()).unwrap().get(0).unwrap().as_str()))
+        (l.is_cut(), Box::from(re.captures(format!("{:?}", l).as_str()).unwrap().get(1).unwrap().as_str()))
     }).collect()
 
 }
@@ -173,14 +183,14 @@ mod tests {
     #[test]
     fn it_optimizes_regex() {
         // TODO make that a real test
-        optimize("aba");
-        optimize("a{3,9}");
-        optimize("^[sS]il.*");
-        optimize("marillion.*^");
-        optimize("(t|T)olkien");
-        optimize("[tT]olkien");
-        optimize(".*");
-        optimize("(tolkien+|tolkien)");
+        optimize_regex("aba");
+        optimize_regex("a{3,9}");
+        optimize_regex("^[sS]il.*");
+        optimize_regex("marillion.*^");
+        optimize_regex("(t|T)olkien");
+        optimize_regex("[tT]olkien");
+        optimize_regex(".*");
+        optimize_regex("(tolkien+|tolkien)");
     }
 }
 

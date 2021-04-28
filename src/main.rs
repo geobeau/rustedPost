@@ -6,13 +6,15 @@ use std::rc::Rc;
 use log::{debug, error, info, trace, warn};
 use fern;
 use log;
+
+use crate::record::SearchQuery;
 mod record;
 mod storage;
 
 fn display_timed_query(storage: &storage::StorageBackend, query: &record::SearchQuery) {
     let now = Instant::now();
     let records = storage.search(query);
-    info!("Searching ({}): yielded {} results in {}us ({}ms)", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis());
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
 }
 
 fn main() {
@@ -22,9 +24,9 @@ fn main() {
     // Perform allocation-free log formatting
     .format(|out, message, record| {
         out.finish(format_args!(
-            "{}[{}][{}][{}:{}] {}",
+            "{}[{}][{}:{}] {}",
             chrono::Local::now().format("[%Y-%m-%dT%H:%M:%S]"),
-            record.target(),
+            // record.target(),
             record.level(),
             record.file().unwrap_or("unknown"),
             record.line().unwrap_or(0),
@@ -84,16 +86,43 @@ fn main() {
         record::SearchField::new_re("extension", "(pdf|epub)")]
     ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
+    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
         record::SearchField::new_eq("author_family_name", "Tolkien"),
         record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_re("title", "[sS]ilmarillion")]
+        record::SearchField::new_re("extension", "(pdf|epub)")],
+        record::QueryFlags::empty(),
+    ));
+    
+    display_timed_query(&storage, &record::SearchQuery::new(vec![
+        record::SearchField::new_re("author_family_name", "[tT]olkien")],
+    ));
+
+    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
+        record::SearchField::new_re("author_family_name", "[tT]olkien")],
+        record::QueryFlags::empty(),
     ));
 
     display_timed_query(&storage, &record::SearchQuery::new(vec![
         record::SearchField::new_eq("author_family_name", "Tolkien"),
         record::SearchField::new_eq("language", "English"),
         record::SearchField::new_eq("extension", "epub")]
+    ));
+
+    display_timed_query(&storage, &record::SearchQuery::new(vec![
+        record::SearchField::new_eq("author_family_name", "Tolstoy"),
+        record::SearchField::new_re("title", "A[n]?na.*")]
+    ));
+
+    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
+        record::SearchField::new_eq("author_family_name", "Tolstoy"),
+        record::SearchField::new_re("title", "A[n]?na.*")],
+        record::QueryFlags::empty(),
+    ));
+
+    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
+        record::SearchField::new_eq("author_family_name", "Tolstoy"),
+        record::SearchField::new_re("title", "Anna Karénine")],
+        record::QueryFlags::empty(),
     ));
 
     println!("Sleeping 60s before exiting (for memory usage snapshots)");
