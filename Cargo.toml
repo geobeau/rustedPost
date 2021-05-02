@@ -18,6 +18,7 @@ bitflags = "1.0"
 log = "0.4"
 fern = "0.6.0"
 chrono = "0.4"
+roaring = "0.7.0"
 
 [profile.dev]
 debug = 2

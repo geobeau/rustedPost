@@ -3,11 +3,10 @@ use std::time::{Instant};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::rc::Rc;
-use log::{debug, error, info, trace, warn};
+use log::{info};
 use fern;
 use log;
 
-use crate::record::SearchQuery;
 mod record;
 mod storage;
 
@@ -34,7 +33,7 @@ fn main() {
         ))
     })
     // Add blanket level filter -
-    .level(log::LevelFilter::Debug)
+    .level(log::LevelFilter::Info)
     .chain(std::io::stdout())
     .apply().unwrap();
 

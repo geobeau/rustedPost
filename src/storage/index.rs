@@ -1,11 +1,11 @@
 use super::record;
 use hashbrown::HashMap;
 use std::{collections::BTreeMap};
-use iter_set;
 use regex::Regex;
 use regex_syntax::Parser;
-use regex_syntax::hir::literal::{Literals, Literal};
-use log::{debug, error, info, trace, warn};
+use regex_syntax::hir::literal::{Literals};
+use log::{debug};
+use roaring::RoaringBitmap;
 
 /// Index contains a map of field name to field
 /// A field contains a map of 
@@ -18,7 +18,7 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn search(&self, query: &record::SearchQuery) -> Vec<usize> {
+    pub fn search(&self, query: &record::SearchQuery) -> Vec<u32> {
         // TODO: generate a result instead of empty vec
 
         // Key search phase
@@ -44,12 +44,12 @@ impl Index {
         if last.is_none() {
             return Vec::new();
         }
-        t.fold((*last.unwrap()).to_vec().clone(), |a, b| {
-            iter_set::intersection(&a, &b).map(|a| a.clone()).collect()
-        })
+        t.fold(last.unwrap(), |a, b| {
+            a & b
+        }).iter().collect()
     }
 
-    pub fn insert_record(&mut self, id: usize, record: &record::Record) {
+    pub fn insert_record(&mut self, id: u32, record: &record::Record) {
         for pair in &record.label_pairs {
             let field = self.label_key_index.entry(pair.key.clone()).or_insert(Field::new());
             field.add_posting(pair.val.clone(), id);
@@ -59,7 +59,7 @@ impl Index {
 
 #[derive(Clone)]
 struct Field {
-    field_map: BTreeMap<Box<str>, Vec<usize>>
+    field_map: BTreeMap<Box<str>, RoaringBitmap>
 }
 
 impl<'a> Field {
@@ -67,56 +67,52 @@ impl<'a> Field {
         Field {field_map: BTreeMap::new()}
     }
 
-    fn add_posting(&mut self, key: Box<str>, id: usize) {
-        let posting_list = self.field_map.entry(key).or_insert(Vec::new());
-        posting_list.push(id);
+    fn add_posting(&mut self, key: Box<str>, id: u32) {
+        let posting_list = self.field_map.entry(key).or_insert(RoaringBitmap::new());
+        posting_list.insert(id);
     }
 
-    fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> Option<Vec<usize>> {
+    fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> Option<RoaringBitmap> {
         // TODO: generate a result instead of option
         let re = Regex::new(format!("^{}$", &field_query.val).as_str()).unwrap();
         let mut count = 0;
         let mut matched = 0;
-        let result: Vec<usize>;
+        let mut result = RoaringBitmap::new();
         let optimized_fields = optimize_regex(&field_query.val);
         if flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH) && !optimized_fields.is_empty() {
             debug!("Running query in optimized mod");
-            result = optimized_fields.into_iter()
-            .fold(Vec::new(), |res, lit| {
+            optimized_fields.into_iter()
+            .for_each(|lit| {
                 debug!("Search for {} (cut:{})", lit.1, lit.0);
                 if lit.0 {
                     // If it's a prefix do a range search and fold along the way
                     (&self.field_map).range(lit.1.clone()..)
                     .take_while(|(k, _)| (**k).starts_with(&*lit.1.clone()))
-                    .fold(res, |sub_res, b| {
+                    .for_each(|field| {
                         count += 1;
-                        if re.is_match(&b.0) {
-                            let u = iter_set::union(&sub_res, b.1).map(|x| x.clone()).collect();
+                        if re.is_match(&field.0) {
+                            result |= field.1;
                             matched += 1;
-                            return u
                         }
-                        sub_res
-                    })
+                    });
                 } else {
                     count += 1;
                     matched += 1;
                     // If it's an exact match do a simple get
                     match self.field_map.get(&*lit.1) {
-                        Some(list) => iter_set::union(&res, list).map(|x| x.clone()).collect(),
-                        None => res
+                        Some(list) => result |= list,
+                        None => ()
                     }
                     
                 }  
             });
         } else {
-            result = (&self.field_map).into_iter().fold( Vec::new(), |a, b| {
+            (&self.field_map).into_iter().for_each(|b| {
                 count += 1;
                 if re.is_match(&b.0) {
-                    let res = iter_set::union(&a, b.1).map(|a| a.clone()).collect();
+                    result |= b.1;
                     matched += 1;
-                    return res
                 }
-                a
             });
         }
 
@@ -124,7 +120,7 @@ impl<'a> Field {
         Some(result)
     }
 
-    fn eq_get(&self, field_query: &record::SearchField) -> Option<Vec<usize>> {
+    fn eq_get(&self, field_query: &record::SearchField) -> Option<RoaringBitmap> {
         match self.field_map.get(&*field_query.val) {
             Some(list) => Some(list.clone()),
             None => None
