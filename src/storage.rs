@@ -31,5 +31,9 @@ impl StorageBackend {
         self.store.multi_get(self.index.search(search_query))
     }
 
+    pub fn print_status(&self) {
+        self.store.print_status();
+    }
+
 }
 
