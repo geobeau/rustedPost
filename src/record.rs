@@ -3,6 +3,7 @@ use std::{cmp::Eq};
 use std::fmt;
 use itertools::free::join;
 use bitflags::bitflags;
+use std::rc::Rc;
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Record {
@@ -20,6 +21,26 @@ impl LabelPair {
         LabelPair {
             key: Box::from(key),
             val: Box::from(val),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct RCRecord {
+    pub label_pairs: Vec<RCLabelPair>,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct RCLabelPair {
+    pub key: Rc<str>,
+    pub val: Rc<str>
+}
+
+impl RCLabelPair {
+    pub fn new(key: &str, val: &str) -> RCLabelPair {
+        RCLabelPair {
+            key: Rc::from(key),
+            val: Rc::from(val),
         }
     }
 }
