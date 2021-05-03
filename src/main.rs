@@ -55,7 +55,7 @@ fn main() {
         }
         total_count += 1;
     });
-    info!("Loaded {} out of {} lines in {}ms", success_count, total_count, now.elapsed().as_millis());
+    info!("Loaded {} out of {} lines in {}ms ({}us per record)", success_count, total_count, now.elapsed().as_millis(), ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32 );
 
     display_timed_query(&storage, &record::SearchQuery::new(vec![
         record::SearchField::new_eq("author_family_name", "Tolkien")]
