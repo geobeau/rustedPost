@@ -3,20 +3,28 @@ use std::rc::Rc;
 mod store;
 mod index;
 
-pub struct StorageBackend {
+pub trait StorageBackend {
+    fn new() -> Self;
+    fn add(&mut self, record: record::Record) -> Option<u32>;
+    fn search(&self, search_query: &record::SearchQuery) -> Vec<&Rc<record::RCRecord>>;
+    fn print_status(&self);
+}
+
+
+pub struct SingleStorageBackend {
     store: store::RecordStore,
     index: index::Index
 }
 
-impl StorageBackend {
-    pub fn new() -> StorageBackend {
-        StorageBackend {
+impl StorageBackend for SingleStorageBackend {
+    fn new() -> SingleStorageBackend {
+        SingleStorageBackend {
             store: store::RecordStore::new(),
             index: index::Index::new(),
         }
     }
 
-    pub fn add(&mut self, record: record::Record) -> Option<u32> {
+    fn add(&mut self, record: record::Record) -> Option<u32> {
         let id = self.store.add(&record);
         match id {
             Some(id) => {
@@ -27,11 +35,11 @@ impl StorageBackend {
         }
     }
 
-    pub fn search(&self, search_query: &record::SearchQuery) -> Vec<&Rc<record::RCRecord>> {
+    fn search(&self, search_query: &record::SearchQuery) -> Vec<&Rc<record::RCRecord>> {
         self.store.multi_get(self.index.search(search_query))
     }
 
-    pub fn print_status(&self) {
+    fn print_status(&self) {
         self.store.print_status();
     }
 
