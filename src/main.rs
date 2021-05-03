@@ -5,11 +5,11 @@ use std::io::{self, BufRead};
 use log::{info};
 use fern;
 use log;
-
+use crate::storage::{StorageBackend, SingleStorageBackend};
 mod record;
 mod storage;
 
-fn display_timed_query(storage: &storage::StorageBackend, query: &record::SearchQuery) {
+fn display_timed_query(storage: &impl StorageBackend, query: &record::SearchQuery) {
     let now = Instant::now();
     let records = storage.search(query);
     info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
@@ -38,7 +38,7 @@ fn main() {
 
     
     info!("Initialising backend storage");
-    let mut storage = storage::StorageBackend::new();
+    let mut storage = SingleStorageBackend::new();
     let now = Instant::now();
     let mut total_count = 0;
     let mut success_count = 0;
