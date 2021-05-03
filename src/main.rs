@@ -2,7 +2,6 @@ use std::vec;
 use std::time::{Instant};
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::rc::Rc;
 use log::{info};
 use fern;
 use log;
@@ -132,7 +131,9 @@ fn main() {
     display_timed_query(&storage, &record::SearchQuery::new(vec![
         record::SearchField::new_eq("author_family_name", "Tolstoy"),
         record::SearchField::new_eq("title", "Anna Karénine")]
-    ));   
+    ));
+    
+    storage.print_status();
 
     println!("Sleeping 60s before exiting (for memory usage snapshots)");
 

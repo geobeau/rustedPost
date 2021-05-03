@@ -1,5 +1,6 @@
 use hashbrown::{HashMap, HashSet};
 use std::rc::Rc;
+use log::{info};
 
 use super::record;
 
@@ -15,7 +16,7 @@ impl RecordStore {
             // TODO: Guess a good capacity instead of hardcording one
             id_store: Vec::with_capacity(2_000_000),
             hash_store: HashMap::with_capacity(2_000_000),
-            symbol_store: HashSet::new()
+            symbol_store: HashSet::with_capacity(1_500_000)
         }
     }
 
@@ -49,6 +50,10 @@ impl RecordStore {
             Some(x) => Some(x),
             None => None,
         }
+    }
+
+    pub fn print_status(&self) {
+        info!("Size of structs: symbols: {}, hashes: {}, ids: {}", self.symbol_store.len(), self.hash_store.len(), self.id_store.len());
     }
 
     pub fn multi_get(&self, ids: Vec<u32>) -> Vec<&Rc<record::RCRecord>> {
