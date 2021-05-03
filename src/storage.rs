@@ -16,7 +16,7 @@ impl StorageBackend {
         }
     }
 
-    pub fn add(&mut self, record: Rc<record::Record>) -> Option<u32> {
+    pub fn add(&mut self, record: record::Record) -> Option<u32> {
         let id = self.store.add(&record);
         match id {
             Some(id) => {
@@ -27,7 +27,7 @@ impl StorageBackend {
         }
     }
 
-    pub fn search(&self, search_query: &record::SearchQuery) -> Vec<&Rc<record::Record>> {
+    pub fn search(&self, search_query: &record::SearchQuery) -> Vec<&Rc<record::RCRecord>> {
         self.store.multi_get(self.index.search(search_query))
     }
 

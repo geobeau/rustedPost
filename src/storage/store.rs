@@ -1,11 +1,12 @@
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 use std::rc::Rc;
 
 use super::record;
 
 pub struct RecordStore {
-    id_store: Vec<Rc<record::Record>>,
-    hash_store: HashMap<Rc<record::Record>, u32>,
+    id_store: Vec<Rc<record::RCRecord>>,
+    hash_store: HashMap<Rc<record::RCRecord>, u32>,
+    symbol_store: HashSet<Rc<str>>,
 }
 
 impl RecordStore {
@@ -13,32 +14,44 @@ impl RecordStore {
         RecordStore {
             // TODO: Guess a good capacity instead of hardcording one
             id_store: Vec::with_capacity(2_000_000),
-            hash_store: HashMap::with_capacity(2_000_000)
+            hash_store: HashMap::with_capacity(2_000_000),
+            symbol_store: HashSet::new()
         }
     }
 
-    pub fn add(&mut self, record: &Rc<record::Record>) -> Option<u32> {
-        let result = self.hash_store.get(record);
+    fn new_rcrecord_from(&mut self, record: &record::Record) -> record::RCRecord {
+        let label_pairs = record.label_pairs.clone().into_iter().map(|l| {
+           let key = self.symbol_store.get_or_insert(Rc::from(l.key)).clone();
+           let val = self.symbol_store.get_or_insert(Rc::from(l.val)).clone();
+           record::RCLabelPair{key: key, val: val}
+        }).collect();
+        record::RCRecord{label_pairs: label_pairs}
+    }
+
+    pub fn add(&mut self, original_record: &record::Record) -> Option<u32> {
+        let new_record = self.new_rcrecord_from(original_record);
+        let result = self.hash_store.get(&new_record);
         match result {
             Some(_record) => None,
             _ => {
-                self.id_store.push(record.clone());
+                let rc = Rc::new(new_record);
+                self.id_store.push(rc.clone());
                 let id = (self.id_store.len() -1) as u32;
-                self.hash_store.insert(record.clone(), id);
+                self.hash_store.insert(rc.clone(), id);
                 Some(id)
             }
         }
         
     }
 
-    pub fn get(&self, id: u32) -> Option<&Rc<record::Record>> {
+    pub fn get(&self, id: u32) -> Option<&Rc<record::RCRecord>> {
         match self.id_store.get(id as usize) {
             Some(x) => Some(x),
             None => None,
         }
     }
 
-    pub fn multi_get(&self, ids: Vec<u32>) -> Vec<&Rc<record::Record>> {
+    pub fn multi_get(&self, ids: Vec<u32>) -> Vec<&Rc<record::RCRecord>> {
         ids.into_iter().filter_map(|id| self.get(id)).collect()
     }
 }

@@ -50,7 +50,7 @@ fn main() {
 
 
     io::BufReader::new(file).lines().for_each(|line| {
-        let id = storage.add(Rc::new(serde_json::from_str(&line.unwrap()).unwrap()));
+        let id = storage.add(serde_json::from_str(&line.unwrap()).unwrap());
         if id.is_some() {
             success_count += 1;
         }
