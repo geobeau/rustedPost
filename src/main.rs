@@ -5,14 +5,15 @@ use std::io::{self, BufRead};
 use log::{info};
 use fern;
 use log;
-use crate::storage::{StorageBackend, SingleStorageBackend};
+use std::sync::{Arc, RwLock};
+use crate::storage::{StorageBackend, SingleStorageBackend, ShardedStorageBackend, start_query_processor, FrontendRequest};
 mod record;
 mod storage;
 
-fn display_timed_query(storage: &impl StorageBackend, query: &record::SearchQuery) {
+fn display_timed_query(storage: &impl StorageBackend, query: record::SearchQuery) {
     let now = Instant::now();
-    let records = storage.search(query);
-    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
+    let records = storage.search(query.clone());
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
 }
 
 fn main() {
@@ -38,7 +39,8 @@ fn main() {
 
     
     info!("Initialising backend storage");
-    let mut storage = SingleStorageBackend::new();
+    let mut storage = ShardedStorageBackend::new();
+    let mut sender = start_query_processor(Arc::new(RwLock::new(storage)));
     let now = Instant::now();
     let mut total_count = 0;
     let mut success_count = 0;
@@ -49,91 +51,91 @@ fn main() {
 
 
     io::BufReader::new(file).lines().for_each(|line| {
-        let id = storage.add(serde_json::from_str(&line.unwrap()).unwrap());
-        if id.is_some() {
+        let id = sender.send(FrontendRequest::AddRawRequest{record: line.unwrap()});
+        if id.is_ok() {
             success_count += 1;
         }
         total_count += 1;
     });
     info!("Loaded {} out of {} lines in {}ms ({}us per record)", success_count, total_count, now.elapsed().as_millis(), ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32 );
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new( vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new( vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_eq("extension", "pdf")],
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_eq("extension", "pdf")],
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_eq("extension", "epub")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_eq("extension", "epub")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_re("extension", "(pdf|epub)")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_re("extension", "(pdf|epub)")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_re("extension", "(pdf|epub)")],
-        record::QueryFlags::empty(),
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_re("extension", "(pdf|epub)")],
+    //     record::QueryFlags::empty(),
+    // ));
     
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_re("author_family_name", "[tT]olkien")],
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_re("author_family_name", "[tT]olkien")],
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_re("author_family_name", "[tT]olkien")],
-        record::QueryFlags::empty(),
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_re("author_family_name", "[tT]olkien")],
+    //     record::QueryFlags::empty(),
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_eq("extension", "epub")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_eq("extension", "epub")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "A[n]?na.*")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "A[n]?na.*")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "A[n]?na.*")],
-        record::QueryFlags::empty(),
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "A[n]?na.*")],
+    //     record::QueryFlags::empty(),
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "Anna Karénine")],
-        record::QueryFlags::empty(),
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "Anna Karénine")],
+    //     record::QueryFlags::empty(),
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "Anna Karénine")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "Anna Karénine")]
+    // ));
 
-    display_timed_query(&storage, &record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_eq("title", "Anna Karénine")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_eq("title", "Anna Karénine")]
+    // ));
     
-    storage.print_status();
+    // storage.print_status();
 
     println!("Sleeping 60s before exiting (for memory usage snapshots)");
 
