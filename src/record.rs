@@ -4,6 +4,7 @@ use std::fmt;
 use itertools::free::join;
 use bitflags::bitflags;
 use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Record {
@@ -32,15 +33,15 @@ pub struct RCRecord {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RCLabelPair {
-    pub key: Rc<str>,
-    pub val: Rc<str>
+    pub key: Arc<str>,
+    pub val: Arc<str>
 }
 
 impl RCLabelPair {
     pub fn new(key: &str, val: &str) -> RCLabelPair {
         RCLabelPair {
-            key: Rc::from(key),
-            val: Rc::from(val),
+            key: Arc::from(key),
+            val: Arc::from(val),
         }
     }
 }
