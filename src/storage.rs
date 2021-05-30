@@ -1,4 +1,5 @@
 use super::record;
+use log::{info};
 use std::sync::{Arc, RwLock};
 use std::thread::spawn;
 use ahash::{AHasher};
@@ -69,15 +70,6 @@ enum BackendRequest {
         response_chan: Sender<Arc<record::RCRecord>>,
     }
 }
-pub enum FrontendRequest {
-    AddRawRequest {
-        record: String,
-    },
-    SearchRequest {
-        query: record::SearchQuery,
-        response_chan: Sender<Arc<record::RCRecord>>,
-    }
-}
 
 
 fn shard_handler(request_rcv: Receiver<BackendRequest>) {
@@ -134,6 +126,7 @@ impl StorageBackend for ShardedStorageBackend {
     fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1);
         (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()});});
+        drop(s);
         r.into_iter().map(|f| f).collect()
     }
 
