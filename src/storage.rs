@@ -20,6 +20,13 @@ pub struct SingleStorageBackend {
     index: index::Index
 }
 
+impl SingleStorageBackend {
+    pub fn raw_add(&mut self, line: String) {
+        let record = serde_json::from_str(line.as_str()).unwrap();
+        self.add(record);
+    }
+}
+
 impl StorageBackend for SingleStorageBackend {
     fn new() -> SingleStorageBackend {
         SingleStorageBackend {
@@ -50,6 +57,9 @@ impl StorageBackend for SingleStorageBackend {
 }
 
 enum BackendRequest {
+    RawAddRequest {
+        line: String,
+    },
     AddRequest {
         record: record::Record,
         response_chan: Sender<Option<u32>>,
@@ -74,33 +84,12 @@ fn shard_handler(request_rcv: Receiver<BackendRequest>) {
     let mut backend = SingleStorageBackend::new();
     loop {
         match request_rcv.recv().unwrap() {
+            BackendRequest::RawAddRequest {line} => {backend.raw_add(line);},
             BackendRequest::AddRequest {record, response_chan} => {response_chan.send(backend.add(record));},
             BackendRequest::SearchRequest {query, response_chan} => backend.search(query).into_iter().for_each(|x| {response_chan.send(x);})
         };
     }
 }
-
-
-fn query_processor(request_rcv: Receiver<FrontendRequest>, backend: Arc<RwLock<ShardedStorageBackend>>) {
-    loop {
-        match request_rcv.recv().unwrap() {
-            FrontendRequest::AddRawRequest {record} => {backend.read().unwrap().raw_add(record);},
-            FrontendRequest::SearchRequest {query, response_chan} => backend.read().unwrap().search(query).into_iter().for_each(|x| {response_chan.send(x);})
-        };
-    }
-}
-
-pub fn start_query_processor(backend: Arc<RwLock<ShardedStorageBackend>>) -> Sender<FrontendRequest> {
-    let num_cpu = 8;
-    let (s, r) = bounded(10000);
-    for _ in 0..num_cpu {
-        let backend_copy = backend.clone();
-        let r_copy = r.clone();
-        spawn(move || query_processor(r_copy, backend_copy));
-    }
-    return s
-}
-
 
 pub struct ShardedStorageBackend {
     shards: Vec<Sender<BackendRequest>>,
@@ -108,14 +97,11 @@ pub struct ShardedStorageBackend {
 }
 
 impl ShardedStorageBackend {
-    fn raw_add(&self, line: String) {
-        let record = serde_json::from_str(line.as_str()).unwrap();
+    pub fn raw_add(&self, line: String) {
         let mut hasher = self.hasher.clone();
-        hasher.write(serde_json::to_string(&line).unwrap().as_bytes());
+        hasher.write(line.as_bytes());
         let hash = hasher.finish();
-        let (s, r) = bounded(1);
-        self.shards[hash as usize % self.shards.len()].send(BackendRequest::AddRequest {record: record, response_chan: s});
-        r.recv().unwrap();
+        self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line});
     }
 }
 
