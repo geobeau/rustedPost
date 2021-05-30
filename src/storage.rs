@@ -119,13 +119,13 @@ impl StorageBackend for ShardedStorageBackend {
         hasher.write(serde_json::to_string(&record).unwrap().as_bytes());
         let hash = hasher.finish();
         let (s, r) = bounded(1);
-        self.shards[hash as usize % self.shards.len()].send(BackendRequest::AddRequest {record: record, response_chan: s});
+        self.shards[hash as usize % self.shards.len()].send(BackendRequest::AddRequest {record: record, response_chan: s}).unwrap();
         r.recv().unwrap()
     }
 
     fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
-        let (s, r) = bounded(1);
-        (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()});});
+        let (s, r) = bounded(1000);
+        (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()}).unwrap();});
         drop(s);
         r.into_iter().map(|f| f).collect()
     }

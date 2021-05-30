@@ -34,17 +34,19 @@ impl Index {
             return Vec::new();
         }
 
-        let mut t = key_search.unwrap().into_iter().filter_map(|q| {
+        let mut t = key_search.unwrap().into_iter().map(|q| {
             match q.0.op {
                 record::Operation::Re => q.1.re_aggregated_get(&q.0, &query.query_flags),
                 record::Operation::Eq => q.1.eq_get(&q.0)
             }
         });
+
         let last = t.next_back();
         if last.is_none() {
             return Vec::new();
         }
         t.fold(last.unwrap(), |a, b| {
+            // TODO: Break early if the bitmap a is empty
             a & b
         }).iter().collect()
     }
@@ -72,7 +74,7 @@ impl<'a> Field {
         posting_list.insert(id);
     }
 
-    fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> Option<RoaringBitmap> {
+    fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> RoaringBitmap {
         // TODO: generate a result instead of option
         let re = Regex::new(format!("^{}$", &field_query.val).as_str()).unwrap();
         let mut count = 0;
@@ -117,13 +119,13 @@ impl<'a> Field {
         }
 
         debug!("Searched with {} over {} values, matched {} (ratio {})", field_query.val, count, matched, matched as f64 / count as f64);
-        Some(result)
+        result
     }
 
-    fn eq_get(&self, field_query: &record::SearchField) -> Option<RoaringBitmap> {
+    fn eq_get(&self, field_query: &record::SearchField) -> RoaringBitmap {
         match self.field_map.get(&*field_query.val) {
-            Some(list) => Some(list.clone()),
-            None => None
+            Some(list) => list.clone(),
+            None => RoaringBitmap::new()
         }
     }
 }
