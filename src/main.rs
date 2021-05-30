@@ -6,7 +6,7 @@ use log::{info};
 use fern;
 use log;
 use std::sync::{Arc, RwLock};
-use crate::storage::{StorageBackend, SingleStorageBackend, ShardedStorageBackend, start_query_processor, FrontendRequest};
+use crate::storage::{StorageBackend, SingleStorageBackend, ShardedStorageBackend, FrontendRequest};
 mod record;
 mod storage;
 
@@ -39,22 +39,21 @@ fn main() {
 
     
     info!("Initialising backend storage");
-    let mut storage = ShardedStorageBackend::new();
-    let mut sender = start_query_processor(Arc::new(RwLock::new(storage)));
+    let mut storage = Arc::new(RwLock::new(ShardedStorageBackend::new()));
     let now = Instant::now();
     let mut total_count = 0;
-    let mut success_count = 0;
+    let mut success_count = 0; 
 
     
     info!("Loading dataset from: {}", FILENAME);
     let file = File::open(FILENAME).unwrap();
 
-
+    let storage_guard = storage.read().unwrap();
     io::BufReader::new(file).lines().for_each(|line| {
-        let id = sender.send(FrontendRequest::AddRawRequest{record: line.unwrap()});
-        if id.is_ok() {
-            success_count += 1;
-        }
+        storage_guard.raw_add(line.unwrap());
+        // if id.is_ok() {
+        //     success_count += 1;
+        // }
         total_count += 1;
     });
     info!("Loaded {} out of {} lines in {}ms ({}us per record)", success_count, total_count, now.elapsed().as_millis(), ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32 );
