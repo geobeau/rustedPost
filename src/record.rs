@@ -3,7 +3,6 @@ use std::{cmp::Eq};
 use std::fmt;
 use itertools::free::join;
 use bitflags::bitflags;
-use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
@@ -96,7 +95,8 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Debug)]
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SearchField {
     pub key: Box<str>,
     pub val: Box<str>,
@@ -127,7 +127,7 @@ impl SearchField {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Operation {
     Eq,
     Re

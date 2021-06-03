@@ -6,17 +6,18 @@ use log::{info};
 use fern;
 use log;
 use std::sync::{Arc, RwLock};
-use crate::storage::{StorageBackend, SingleStorageBackend, ShardedStorageBackend};
+use warp::Filter;
 mod record;
 mod storage;
 
-fn display_timed_query(storage: &Arc<RwLock<ShardedStorageBackend>>, query: record::SearchQuery) {
+fn display_timed_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::SearchQuery) {
     let now = Instant::now();
-    let records = storage.read().unwrap().search(query.clone());
+    let records = backend.read().unwrap().search(query.clone());
     info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     const FILENAME: &str = "data/dataset.txt";
 
     fern::Dispatch::new()
@@ -38,7 +39,7 @@ fn main() {
 
     
     info!("Initialising backend storage");
-    let storage = Arc::new(RwLock::new(ShardedStorageBackend::new()));
+    let storage = Arc::new(RwLock::new(storage::ShardedStorageBackend::new()));
     let now = Instant::now();
     let mut total_count = 0;
     let mut success_count = 0; 
@@ -54,6 +55,7 @@ fn main() {
         success_count += 1;
         total_count += 1;
     });
+    drop(storage_guard);
     info!("Loaded {} out of {} lines in {}ms ({}us per record)", success_count, total_count, now.elapsed().as_millis(), ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32 );
 
     // Wait a few seconds to let the shards catch up after the file read 
@@ -137,7 +139,16 @@ fn main() {
     
     // storage.print_status();
 
-    println!("Sleeping 60s before exiting (for memory usage snapshots)");
+    let search =  warp::post()
+        .and(warp::path("search"))
+        .and(warp::body::json())
+        .map(move |search: Vec<record::SearchField>| {
+            let search_query = record::SearchQuery::new(search);
+            display_timed_query(&storage, search_query);
+            warp::reply::reply()
+        });
 
-    std::thread::sleep(std::time::Duration::from_secs(60))
+    warp::serve(search)
+        .run(([127, 0, 0, 1], 8080))
+        .await;
 }

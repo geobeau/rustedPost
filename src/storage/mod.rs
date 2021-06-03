@@ -1,20 +1,11 @@
 use super::record;
-use log::{info};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread::spawn;
 use ahash::{AHasher};
 use std::hash::Hasher;
 use crossbeam_channel::{Sender, Receiver, bounded};
 mod store;
 mod index;
-
-pub trait StorageBackend {
-    fn new() -> Self;
-    fn add(&mut self, record: record::Record) -> Option<u32>;
-    fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>>;
-    fn print_status(&self);
-}
-
 
 pub struct SingleStorageBackend {
     store: store::RecordStore,
@@ -28,7 +19,7 @@ impl SingleStorageBackend {
     }
 }
 
-impl StorageBackend for SingleStorageBackend {
+impl SingleStorageBackend {
     fn new() -> SingleStorageBackend {
         SingleStorageBackend {
             store: store::RecordStore::new(),
@@ -89,16 +80,7 @@ pub struct ShardedStorageBackend {
 }
 
 impl ShardedStorageBackend {
-    pub fn raw_add(&self, line: String) {
-        let mut hasher = self.hasher.clone();
-        hasher.write(line.as_bytes());
-        let hash = hasher.finish();
-        self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line});
-    }
-}
-
-impl StorageBackend for ShardedStorageBackend {
-    fn new() -> ShardedStorageBackend {
+    pub fn new() -> ShardedStorageBackend {
         // Randomly chosen number of cpus
         // TODO either discover or add it on the CLI
         let num_cpu = 8;
@@ -114,7 +96,14 @@ impl StorageBackend for ShardedStorageBackend {
         }
     }
     
-    fn add(&mut self, record: record::Record) -> Option<u32> {
+    pub fn raw_add(&self, line: String) {
+        let mut hasher = self.hasher.clone();
+        hasher.write(line.as_bytes());
+        let hash = hasher.finish();
+        self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line});
+    }
+    
+    pub fn add(&self, record: record::Record) -> Option<u32> {
         let mut hasher = self.hasher.clone();
         hasher.write(serde_json::to_string(&record).unwrap().as_bytes());
         let hash = hasher.finish();
@@ -123,16 +112,12 @@ impl StorageBackend for ShardedStorageBackend {
         r.recv().unwrap()
     }
 
-    fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
+    pub fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1000);
         (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()}).unwrap();});
         drop(s);
         r.into_iter().map(|f| f).collect()
     }
-
-    fn print_status(&self) {
-    }
-
 }
 
 
