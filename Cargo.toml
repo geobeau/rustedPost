@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mimalloc = { version = "*", default-features = true }
+mimalloc = { version = "*", default-features = false }
 iter-set = "2.0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -27,4 +27,8 @@ warp = "0.3"
 
 [profile.dev]
 debug = 2
+opt-level = 3
+
+[profile.release]
+lto = true
 opt-level = 3

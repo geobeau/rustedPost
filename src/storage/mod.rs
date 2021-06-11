@@ -83,7 +83,7 @@ impl ShardedStorageBackend {
     pub fn new() -> ShardedStorageBackend {
         // Randomly chosen number of cpus
         // TODO either discover or add it on the CLI
-        let num_cpu = 8;
+        let num_cpu = 2;
         let mut shards: Vec<Sender<BackendRequest>> = vec![];
         for _ in 0..num_cpu {
             let (s, r) = bounded(10000);
@@ -117,6 +117,15 @@ impl ShardedStorageBackend {
         (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()}).unwrap();});
         drop(s);
         r.into_iter().map(|f| f).collect()
+    }
+    
+    pub fn wait_pending_operations(&self) {
+        loop {
+            let empty = (&self.shards).into_iter().fold(true, |a, s| a && s.is_empty());
+            if empty { break; }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        
     }
 }
 

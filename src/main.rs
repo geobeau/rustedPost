@@ -11,7 +11,6 @@ use warp::Filter;
 mod record;
 mod storage;
 
-
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
@@ -60,11 +59,10 @@ async fn main() {
         success_count += 1;
         total_count += 1;
     });
+    storage_guard.wait_pending_operations();
     drop(storage_guard);
     info!("Loaded {} out of {} lines in {}ms ({}us per record)", success_count, total_count, now.elapsed().as_millis(), ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32 );
 
-    // Wait a few seconds to let the shards catch up after the file read 
-    std::thread::sleep(std::time::Duration::from_secs(1));
 
     display_timed_query(&storage, record::SearchQuery::new(vec![
         record::SearchField::new_eq("author_family_name", "Tolkien")]
