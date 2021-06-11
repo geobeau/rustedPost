@@ -1,3 +1,4 @@
+use mimalloc::MiMalloc;
 use std::vec;
 use std::time::{Instant};
 use std::fs::File;
@@ -9,6 +10,10 @@ use std::sync::{Arc, RwLock};
 use warp::Filter;
 mod record;
 mod storage;
+
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn display_timed_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::SearchQuery) {
     let now = Instant::now();

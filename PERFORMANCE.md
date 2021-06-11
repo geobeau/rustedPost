@@ -26,6 +26,15 @@ possible implementation is to shard the data and have a single server host
 multiple shard. Shards would then be pinned to a specific CPU, hopefully 
 benefiting from data locality and being lock free.
 
+# Allocator
+
+Since RustedPost if very allocation heavy (especially during ingestion time), having
+fast allocations is crucial!
+
+Switching the default allocator to Mimalloc (https://github.com/microsoft/mimalloc)
+yield around 20% faster ingestion speed.
+
+
 # Memory usage
 
 Going from `String` to `Box<str>` reduced memory usage by 25% (2.6GiB to 2.0GiB).
@@ -147,5 +156,3 @@ The last advantage is when you mistakenly use regex search with a non regex fiel
 ```
 
 The regex have you covered for a minor performance price ;) (500us instead of 5us, still much better than 92ms)
-
-
