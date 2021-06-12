@@ -24,6 +24,15 @@ ahash = "0.7.2"
 crossbeam-channel = "0.5"
 tokio = { version = "1", features = ["full"] }
 warp = "0.3"
+smallstr = "0.2.0"
+smallvec = "1.6.1"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "lexer"
+harness = false
 
 [profile.dev]
 debug = 2
