@@ -1,4 +1,5 @@
 use super::record;
+use super::record::query;
 
 use hashbrown::HashMap;
 use std::vec;
@@ -68,8 +69,8 @@ impl Index {
 
         let mut t = key_search.unwrap().into_iter().map(|q| {
             match q.0.op {
-                record::Operation::Re => q.1.re_aggregated_get(&q.0, &query.query_flags),
-                record::Operation::Eq => q.1.eq_get(&q.0)
+                query::Operation::Re => q.1.re_aggregated_get(&q.0, &query.query_flags),
+                query::Operation::Eq => q.1.eq_get(&q.0)
             }
         });
 
@@ -110,14 +111,14 @@ impl<'a> Field {
         posting_list.insert(id);
     }
 
-    fn re_aggregated_get(&self, field_query: &record::SearchField, flags: &record::QueryFlags) -> RoaringBitmap {
+    fn re_aggregated_get(&self, field_query: &query::Field, flags: &query::SearchFlags) -> RoaringBitmap {
         // TODO: generate a result instead of option
         let re = Regex::new(format!("^{}$", &field_query.val).as_str()).unwrap();
         let mut count = 0;
         let mut matched = 0;
         let mut result = RoaringBitmap::new();
         let optimized_fields = optimize_regex(&field_query.val);
-        if flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH) && !optimized_fields.is_empty() {
+        if flags.contains(query::SearchFlags::OPTIMIZE_REGEX_SEARCH) && !optimized_fields.is_empty() {
             debug!("Running query in optimized mod");
             optimized_fields.into_iter()
             .for_each(|lit| {
@@ -158,7 +159,7 @@ impl<'a> Field {
         result
     }
 
-    fn eq_get(&self, field_query: &record::SearchField) -> RoaringBitmap {
+    fn eq_get(&self, field_query: &query::Field) -> RoaringBitmap {
         match self.field_map.get(&*field_query.val) {
             Some(list) => list.clone(),
             None => RoaringBitmap::new()
@@ -195,9 +196,9 @@ mod tests {
         let mut index = Index::new();
         load_test_data(&mut index);
 
-        let mut result = index.search(&record::SearchQuery::new(vec![record::SearchField::new_eq("keya", "val1")]));
+        let mut result = index.search(&query::Search::new(vec![query::Field::new_eq("keya", "val1")]));
         assert_eq!(result, vec![0, 1, 2]);
-        result = index.search(&record::SearchQuery::new(vec![record::SearchField::new_eq("keyb", "val1")]));
+        result = index.search(&query::Search::new(vec![query::Field::new_eq("keyb", "val1")]));
         assert_eq!(result, vec![0, 2]);
     }
 
@@ -206,11 +207,11 @@ mod tests {
         let mut index = Index::new();
         load_test_data(&mut index);
 
-        let mut result = index.search(&record::SearchQuery::new(vec![record::SearchField::new_eq("keya", "val1"), record::SearchField::new_eq("keya", "val1")]));
+        let mut result = index.search(&query::Search::new(vec![query::Field::new_eq("keya", "val1"), query::Field::new_eq("keya", "val1")]));
         assert_eq!(result, vec![0, 1, 2]);
-        result = index.search(&record::SearchQuery::new(vec![record::SearchField::new_eq("keya", "val1"), record::SearchField::new_eq("keyb", "val1")]));
+        result = index.search(&query::Search::new(vec![query::Field::new_eq("keya", "val1"), query::Field::new_eq("keyb", "val1")]));
         assert_eq!(result, vec![0, 2]);
-        result = index.search(&record::SearchQuery::new(vec![record::SearchField::new_eq("keyc", "val3"), record::SearchField::new_eq("keyb", "val1")]));
+        result = index.search(&query::Search::new(vec![query::Field::new_eq("keyc", "val3"), query::Field::new_eq("keyb", "val1")]));
         assert_eq!(result, vec![0]);
     }
 

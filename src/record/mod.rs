@@ -2,11 +2,14 @@ use serde::{Serialize, Deserialize};
 use std::{cmp::Eq};
 use std::fmt;
 use itertools::free::join;
-use bitflags::bitflags;
 use std::sync::Arc;
 use std::str;
+use smallstr::SmallString;
+use smallvec::SmallVec;
 
+pub mod query;
 
+/////////////////////////// REGULAR RECORDS ///////////////////////////
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Record {
     pub label_pairs: Vec<LabelPair>,
@@ -27,6 +30,7 @@ impl LabelPair {
     }
 }
 
+/////////////////////////// RC RECORDS ///////////////////////////
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RCRecord {
     pub label_pairs: Vec<RCLabelPair>,
@@ -60,10 +64,11 @@ impl fmt::Display for RCLabelPair {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SearchQuery {
-    pub search_fields: Vec<SearchField>,
-    pub query_flags: QueryFlags,
+/////////////////////////// SMALL RECORDS ///////////////////////////
+// Small records are like regular records except they are made to stay
+// in stack
+pub struct SmallRecord {
+    pub label_pairs: SmallVec<[SmallLabelPair; 16]>,
 }
 
 impl SearchQuery {
@@ -255,3 +260,7 @@ mod tests {
 
 
 
+pub struct SmallLabelPair {
+    pub key: SmallString<[u8; 16]>,
+    pub val: SmallString<[u8; 32]>,
+}

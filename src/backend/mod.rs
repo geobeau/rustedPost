@@ -1,4 +1,6 @@
 use super::record;
+use super::lexer;
+use super::record::query;
 use super::index;
 use super::store;
 
@@ -43,7 +45,7 @@ impl SingleStorageBackend {
         }
     }
 
-    fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
+    fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         self.store.multi_get(self.index.search(&search_query))
     }
 
@@ -87,7 +89,7 @@ enum BackendRequest {
         response_chan: Sender<Option<u32>>,
     },
     SearchRequest {
-        query: record::SearchQuery,
+        query: query::Search,
         response_chan: Sender<Arc<record::RCRecord>>,
     },
     KeyValuesSearchRequest {
@@ -147,7 +149,7 @@ impl ShardedStorageBackend {
         r.recv().unwrap()
     }
 
-    pub fn search(&self, search_query: record::SearchQuery) -> Vec<Arc<record::RCRecord>> {
+    pub fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1000);
         (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::SearchRequest {query: search_query.clone(), response_chan: s.clone()}).unwrap();});
         drop(s);
