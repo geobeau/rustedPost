@@ -1,4 +1,7 @@
 use super::record;
+use super::index;
+use super::store;
+
 use std::sync::Arc;
 use std::thread::spawn;
 use ahash::{AHasher};

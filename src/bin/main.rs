@@ -8,13 +8,13 @@ use fern;
 use log;
 use std::sync::{Arc, RwLock};
 use warp::Filter;
-mod record;
-mod storage;
+use rusted_post::record;
+use rusted_post::backend;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-fn display_timed_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::SearchQuery) {
+fn display_timed_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, query: record::SearchQuery) {
     let now = Instant::now();
     let records = backend.read().unwrap().search(query.clone());
     info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH));
@@ -50,7 +50,7 @@ async fn main() {
 
     
     info!("Initialising backend storage");
-    let storage = Arc::new(RwLock::new(storage::ShardedStorageBackend::new()));
+    let storage = Arc::new(RwLock::new(backend::ShardedStorageBackend::new()));
     let now = Instant::now();
     let mut total_count = 0;
     let mut success_count = 0; 
