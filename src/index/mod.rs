@@ -4,6 +4,7 @@ use super::record::query;
 use hashbrown::HashMap;
 use std::vec;
 use std::{collections::BTreeMap};
+use std::sync::Arc;
 use regex::Regex;
 use regex_syntax::Parser;
 use regex_syntax::hir::literal::{Literals};
@@ -20,7 +21,7 @@ pub enum KeyValuesSearchResult {
 /// Index contains a map of field name to field
 /// A field contains a map of 
 pub struct Index {
-    label_key_index: HashMap<Box<str>, Field>
+    label_key_index: HashMap<Arc<str>, Field>
 }
 
 impl Index {
@@ -57,7 +58,7 @@ impl Index {
         // Key search phase
         // Get the list of possible values from the index for each keys
         let key_search: Option<Vec<_>> = query.search_fields.clone().into_iter().map(|query| {
-            match self.label_key_index.get(&query.key) {
+            match self.label_key_index.get(query.key.as_ref()) {
                 Some(field) => Some((query, field)),
                 None => None
             }
@@ -88,7 +89,7 @@ impl Index {
         self.simple_search(query).iter().collect()
     }
 
-    pub fn insert_record(&mut self, id: u32, record: &record::Record) {
+    pub fn insert_record(&mut self, id: u32, record: &record::RCRecord) {
         for pair in &record.label_pairs {
             let field = self.label_key_index.entry(pair.key.clone()).or_insert(Field::new());
             field.add_posting(pair.val.clone(), id);
@@ -98,7 +99,7 @@ impl Index {
 
 #[derive(Clone)]
 struct Field {
-    field_map: BTreeMap<Box<str>, RoaringBitmap>
+    field_map: BTreeMap<Arc<str>, RoaringBitmap>
 }
 
 impl<'a> Field {
@@ -106,7 +107,7 @@ impl<'a> Field {
         Field {field_map: BTreeMap::new()}
     }
 
-    fn add_posting(&mut self, key: Box<str>, id: u32) {
+    fn add_posting(&mut self, key: Arc<str>, id: u32) {
         let posting_list = self.field_map.entry(key).or_insert(RoaringBitmap::new());
         posting_list.insert(id);
     }
@@ -168,7 +169,7 @@ impl<'a> Field {
 }
 
 /// A helper function to return the prefixes usable in the aggregated get
-pub fn optimize_regex(regex: &str) -> Vec<(bool, Box<str>)> {
+pub fn optimize_regex(regex: &str) -> Vec<(bool, Arc<str>)> {
     // TODO: Move regex to lazy static
     let re_cut = Regex::new(r"^Cut\((.*)\)$").unwrap();
     let re_complete = Regex::new(r"^Complete\((.*)\)$").unwrap();
@@ -177,7 +178,7 @@ pub fn optimize_regex(regex: &str) -> Vec<(bool, Box<str>)> {
     Literals::prefixes(&hir).literals().into_iter().map(|l| {
         // I didn't find a better way :'(, everything is private
         let re = if l.is_cut() {&re_cut} else {&re_complete};
-        (l.is_cut(), Box::from(re.captures(format!("{:?}", l).as_str()).unwrap().get(1).unwrap().as_str()))
+        (l.is_cut(), Arc::from(re.captures(format!("{:?}", l).as_str()).unwrap().get(1).unwrap().as_str()))
     }).collect()
 
 }
@@ -186,9 +187,9 @@ pub fn optimize_regex(regex: &str) -> Vec<(bool, Box<str>)> {
 mod tests {
     use super::*;
     fn load_test_data(index: &mut Index) {
-        index.insert_record(0, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val1"), record::LabelPair::new("keyc", "val3")]});
-        index.insert_record(1, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val2"), record::LabelPair::new("keyc", "val2")]});
-        index.insert_record(2, &record::Record{label_pairs: vec![record::LabelPair::new("keya", "val1"), record::LabelPair::new("keyb", "val1"), record::LabelPair::new("keyc", "val1")]});
+        index.insert_record(0, &record::RCRecord{label_pairs: vec![record::RCLabelPair::new("keya", "val1"), record::RCLabelPair::new("keyb", "val1"), record::RCLabelPair::new("keyc", "val3")]});
+        index.insert_record(1, &record::RCRecord{label_pairs: vec![record::RCLabelPair::new("keya", "val1"), record::RCLabelPair::new("keyb", "val2"), record::RCLabelPair::new("keyc", "val2")]});
+        index.insert_record(2, &record::RCRecord{label_pairs: vec![record::RCLabelPair::new("keya", "val1"), record::RCLabelPair::new("keyb", "val1"), record::RCLabelPair::new("keyc", "val1")]});
     } 
 
     #[test]
