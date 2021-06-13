@@ -21,8 +21,13 @@ pub struct SingleStorageBackend {
 
 impl SingleStorageBackend {
     pub fn raw_add(&mut self, line: String) {
-        let record = serde_json::from_str(line.as_str()).unwrap();
-        self.add(record);
+        let result = lexer::parse_small_record(line.as_str());
+        if result.is_none() {
+            println!("{}", line);
+            return
+        }
+
+        self.add(result.unwrap());
     }
 }
 
@@ -34,12 +39,12 @@ impl SingleStorageBackend {
         }
     }
 
-    fn add(&mut self, record: record::Record) -> Option<u32> {
-        let id = self.store.add(&record);
-        match id {
-            Some(id) => {
-                self.index.insert_record(id, &record);
-                Some(id)
+    fn add(&mut self, record: record::SmallRecord) -> Option<u32> {
+        let tuple = self.store.add(&record);
+        match tuple {
+            Some(tuple) => {
+                self.index.insert_record(tuple.0, &tuple.1);
+                Some(tuple.0)
             }
             _ => None
         }
@@ -85,7 +90,7 @@ enum BackendRequest {
         line: String,
     },
     AddRequest {
-        record: record::Record,
+        record: record::SmallRecord,
         response_chan: Sender<Option<u32>>,
     },
     SearchRequest {
@@ -140,14 +145,14 @@ impl ShardedStorageBackend {
         self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line});
     }
     
-    pub fn add(&self, record: record::Record) -> Option<u32> {
-        let mut hasher = self.hasher.clone();
-        hasher.write(serde_json::to_string(&record).unwrap().as_bytes());
-        let hash = hasher.finish();
-        let (s, r) = bounded(1);
-        self.shards[hash as usize % self.shards.len()].send(BackendRequest::AddRequest {record: record, response_chan: s}).unwrap();
-        r.recv().unwrap()
-    }
+    // pub fn add(&self, record: record::Record) -> Option<u32> {
+    //     let mut hasher = self.hasher.clone();
+    //     hasher.write(serde_json::to_string(&record).unwrap().as_bytes());
+    //     let hash = hasher.finish();
+    //     let (s, r) = bounded(1);
+    //     self.shards[hash as usize % self.shards.len()].send(BackendRequest::AddRequest {record: record, response_chan: s}).unwrap();
+    //     r.recv().unwrap()
+    // }
 
     pub fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1000);

@@ -8,7 +8,6 @@ use fern;
 use log;
 use std::sync::{Arc, RwLock};
 use warp::Filter;
-use rusted_post::record;
 use rusted_post::record::query;
 use rusted_post::backend;
 
@@ -30,7 +29,7 @@ fn display_timed_key_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>
 
 #[tokio::main]
 async fn main() {
-    const FILENAME: &str = "data/dataset.txt";
+    const FILENAME: &str = "data/dataset_custom.txt";
 
     fern::Dispatch::new()
     // Perform allocation-free log formatting

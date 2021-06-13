@@ -11,4 +11,5 @@ Cargo.lock
 main
 data/dataset.csv
 data/dataset.txt
-data/book_dataset.sqlite
+data/*.sqlite
+data/mysql2sqlite

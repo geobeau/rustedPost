@@ -19,16 +19,16 @@ impl RecordStore {
         }
     }
 
-    fn new_rcrecord_from(&mut self, record: &record::Record) -> record::RCRecord {
-        let label_pairs = record.label_pairs.clone().into_iter().map(|l| {
-           let key = self.symbol_store.get_or_insert(Arc::from(l.key)).clone();
-           let val = self.symbol_store.get_or_insert(Arc::from(l.val)).clone();
+    fn new_rcrecord_from(&mut self, record: &record::SmallRecord) -> record::RCRecord {
+        let label_pairs = (&record.label_pairs).into_iter().map(|l| {
+           let key = self.symbol_store.get_or_insert(Arc::from(l.key.as_str())).clone();
+           let val = self.symbol_store.get_or_insert(Arc::from(l.val.as_str())).clone();
            record::RCLabelPair{key: key, val: val}
         }).collect();
         record::RCRecord{label_pairs: label_pairs}
     }
 
-    pub fn add(&mut self, original_record: &record::Record) -> Option<u32> {
+    pub fn add(&mut self, original_record: &record::SmallRecord) -> Option<(u32, Arc<record::RCRecord>)> {
         let new_record = self.new_rcrecord_from(original_record);
         let result = self.hash_store.get(&new_record);
         match result {
@@ -38,7 +38,7 @@ impl RecordStore {
                 self.id_store.push(rc.clone());
                 let id = (self.id_store.len() -1) as u32;
                 self.hash_store.insert(rc.clone(), id);
-                Some(id)
+                Some((id, rc.clone()))
             }
         }
         
