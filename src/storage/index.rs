@@ -1,11 +1,19 @@
 use super::record;
 use hashbrown::HashMap;
+use std::vec;
 use std::{collections::BTreeMap};
 use regex::Regex;
 use regex_syntax::Parser;
 use regex_syntax::hir::literal::{Literals};
 use log::{debug};
 use roaring::RoaringBitmap;
+
+
+pub enum KeyValuesSearchResult {
+    Err(&'static str),
+    Ok(Vec<Box<str>>),
+    DirtyOk(Vec<u32>),
+}
 
 /// Index contains a map of field name to field
 /// A field contains a map of 
@@ -18,7 +26,30 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn search(&self, query: &record::SearchQuery) -> Vec<u32> {
+    pub fn key_values_search(&self, query: &record::KeyValuesSearch) -> KeyValuesSearchResult {
+        let records = self.simple_search(&query.to_search_query());
+    
+        let field = self.label_key_index.get(&query.key_field);
+        if field.is_none() {
+            return KeyValuesSearchResult::Ok(Vec::new());
+        }
+
+        let map = &field.unwrap().field_map;
+        if query.query_flags.contains(record::QueryFlags::ABORT_EARLY) && map.len() as u64 > records.len() {
+            return KeyValuesSearchResult::DirtyOk(records.iter().collect());
+        }
+
+        KeyValuesSearchResult::Ok(map.iter().filter_map(|field| {
+            let res = &records & field.1;
+            if res.is_empty() {
+                None
+            } else {
+                Some(field.0.clone())
+            }
+        }).collect())
+    }
+
+    fn simple_search(&self, query: &record::SearchQuery) -> RoaringBitmap {
         // TODO: generate a result instead of empty vec
 
         // Key search phase
@@ -31,7 +62,7 @@ impl Index {
         }).collect();
 
         if key_search.is_none() {
-            return Vec::new();
+            return RoaringBitmap::new();
         }
 
         let mut t = key_search.unwrap().into_iter().map(|q| {
@@ -43,12 +74,16 @@ impl Index {
 
         let last = t.next_back();
         if last.is_none() {
-            return Vec::new();
+            return RoaringBitmap::new();
         }
         t.fold(last.unwrap(), |a, b| {
             // TODO: Break early if the bitmap a is empty
             a & b
-        }).iter().collect()
+        })
+    }
+
+    pub fn search(&self, query: &record::SearchQuery) -> Vec<u32> {
+        self.simple_search(query).iter().collect()
     }
 
     pub fn insert_record(&mut self, id: u32, record: &record::Record) {

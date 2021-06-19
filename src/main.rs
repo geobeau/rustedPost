@@ -17,7 +17,14 @@ static GLOBAL: MiMalloc = MiMalloc;
 fn display_timed_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::SearchQuery) {
     let now = Instant::now();
     let records = backend.read().unwrap().search(query.clone());
-    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.is_all());
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH));
+}
+
+fn display_timed_key_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::KeyValuesSearch) {
+    let now = Instant::now();
+    let records = backend.read().unwrap().key_values_search(query.clone());
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH));
+    records.iter().for_each(|record|info!("Found: {}", record))
 }
 
 #[tokio::main]
@@ -107,38 +114,66 @@ async fn main() {
         record::QueryFlags::empty(),
     ));
 
-    display_timed_query(&storage, record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolkien"),
-        record::SearchField::new_eq("language", "English"),
-        record::SearchField::new_eq("extension", "epub")]
+    // display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
+    //     record::SearchField::new_re("author_family_name", "[tT]olkien"),
+    //     record::SearchField::new_eq("language", "English")],
+    //     "title",
+    // ));
+
+    display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
+        record::SearchField::new_eq("language", "English")],
+        "extension",
     ));
 
-    display_timed_query(&storage, record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "A[n]?na.*")]
+    display_timed_key_query(&storage, record::KeyValuesSearch::new_with_flags(vec![
+        record::SearchField::new_eq("language", "English")],
+        "extension",
+        record::QueryFlags::ABORT_EARLY | record::QueryFlags::OPTIMIZE_REGEX_SEARCH,
     ));
 
-    display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "A[n]?na.*")],
-        record::QueryFlags::empty(),
+    display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
+        record::SearchField::new_eq("language", "Breton")],
+        "title",
     ));
 
-    display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "Anna Karénine")],
-        record::QueryFlags::empty(),
+    display_timed_key_query(&storage, record::KeyValuesSearch::new_with_flags(vec![
+        record::SearchField::new_eq("language", "Breton")],
+        "title",
+        record::QueryFlags::ABORT_EARLY | record::QueryFlags::OPTIMIZE_REGEX_SEARCH,
     ));
 
-    display_timed_query(&storage, record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_re("title", "Anna Karénine")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolkien"),
+    //     record::SearchField::new_eq("language", "English"),
+    //     record::SearchField::new_eq("extension", "epub")]
+    // ));
 
-    display_timed_query(&storage, record::SearchQuery::new(vec![
-        record::SearchField::new_eq("author_family_name", "Tolstoy"),
-        record::SearchField::new_eq("title", "Anna Karénine")]
-    ));
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "A[n]?na.*")]
+    // ));
+
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "A[n]?na.*")],
+    //     record::QueryFlags::empty(),
+    // ));
+
+    // display_timed_query(&storage, record::SearchQuery::new_with_flags(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "Anna Karénine")],
+    //     record::QueryFlags::empty(),
+    // ));
+
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_re("title", "Anna Karénine")]
+    // ));
+
+    // display_timed_query(&storage, record::SearchQuery::new(vec![
+    //     record::SearchField::new_eq("author_family_name", "Tolstoy"),
+    //     record::SearchField::new_eq("title", "Anna Karénine")]
+    // ));
     
     // storage.print_status();
 
