@@ -2,7 +2,6 @@ use super::record;
 use super::record::query;
 
 use hashbrown::HashMap;
-use std::vec;
 use std::{collections::BTreeMap};
 use std::sync::Arc;
 use regex::Regex;
@@ -14,7 +13,7 @@ use roaring::RoaringBitmap;
 
 pub enum KeyValuesSearchResult {
     Err(&'static str),
-    Ok(Vec<Box<str>>),
+    Ok(Vec<Arc<str>>),
     DirtyOk(Vec<u32>),
 }
 
@@ -29,16 +28,17 @@ impl Index {
         Index {label_key_index: HashMap::new()}
     }
 
-    pub fn key_values_search(&self, query: &record::KeyValuesSearch) -> KeyValuesSearchResult {
+    pub fn key_values_search(&self, query: &query::KeyValuesSearch) -> KeyValuesSearchResult {
         let records = self.simple_search(&query.to_search_query());
-    
-        let field = self.label_key_index.get(&query.key_field);
+        // TODO: avoid doing the transform to ARC
+        let key = Arc::from(query.key_field.clone());
+        let field = self.label_key_index.get(&key);
         if field.is_none() {
             return KeyValuesSearchResult::Ok(Vec::new());
         }
 
         let map = &field.unwrap().field_map;
-        if query.query_flags.contains(record::QueryFlags::ABORT_EARLY) && map.len() as u64 > records.len() {
+        if query.query_flags.contains(query::SearchFlags::ABORT_EARLY) && map.len() as u64 > records.len() {
             return KeyValuesSearchResult::DirtyOk(records.iter().collect());
         }
 
@@ -52,7 +52,7 @@ impl Index {
         }).collect())
     }
 
-    fn simple_search(&self, query: &record::SearchQuery) -> RoaringBitmap {
+    fn simple_search(&self, query: &query::Search) -> RoaringBitmap {
         // TODO: generate a result instead of empty vec
 
         // Key search phase
@@ -85,7 +85,7 @@ impl Index {
         })
     }
 
-    pub fn search(&self, query: &record::SearchQuery) -> Vec<u32> {
+    pub fn search(&self, query: &query::Search) -> Vec<u32> {
         self.simple_search(query).iter().collect()
     }
 
