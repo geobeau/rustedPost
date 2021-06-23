@@ -11,8 +11,6 @@ use std::hash::Hasher;
 use hashbrown::HashSet;
 use crossbeam_channel::{Sender, Receiver, bounded};
 use log::{info};
-mod store;
-mod index;
 
 pub struct SingleStorageBackend {
     store: store::RecordStore,
@@ -54,7 +52,7 @@ impl SingleStorageBackend {
         self.store.multi_get(self.index.search(&search_query))
     }
 
-    fn key_values_search(&self, key_values_search_query: record::KeyValuesSearch) -> Vec<Box<str>> {
+    fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
         match self.index.key_values_search(&key_values_search_query) {
             index::KeyValuesSearchResult::Ok(x) => {
                 info!("Search in normal mode (index filtering)");
@@ -69,7 +67,7 @@ impl SingleStorageBackend {
                     };
                     let pair = record.label_pairs.iter().find(|pair| pair.key.as_ref() == key_values_search_query.key_field.as_ref());
                     match pair {
-                        Some(pair) => Some(Box::from(pair.val.as_ref())),
+                        Some(pair) => Some(pair.val.clone()),
                         None => None,
                     }
                 // TODO return ARC instead of converting to Box 
@@ -98,8 +96,8 @@ enum BackendRequest {
         response_chan: Sender<Arc<record::RCRecord>>,
     },
     KeyValuesSearchRequest {
-        query: record::KeyValuesSearch,
-        response_chan: Sender<Box<str>>,
+        query: query::KeyValuesSearch,
+        response_chan: Sender<Arc<str>>,
     }
 }
 
@@ -109,9 +107,9 @@ fn shard_handler(request_rcv: Receiver<BackendRequest>) {
     loop {
         match request_rcv.recv().unwrap() {
             BackendRequest::RawAddRequest {line} => {backend.raw_add(line);},
-            BackendRequest::AddRequest {record, response_chan} => {response_chan.send(backend.add(record));},
-            BackendRequest::SearchRequest {query, response_chan} => backend.search(query).into_iter().for_each(|x| {response_chan.send(x);}),
-            BackendRequest::KeyValuesSearchRequest {query, response_chan} => backend.key_values_search(query).into_iter().for_each(|x| {response_chan.send(x);})
+            BackendRequest::AddRequest {record, response_chan} => {response_chan.send(backend.add(record)).unwrap();},
+            BackendRequest::SearchRequest {query, response_chan} => backend.search(query).into_iter().for_each(|x| {response_chan.send(x).unwrap();}),
+            BackendRequest::KeyValuesSearchRequest {query, response_chan} => backend.key_values_search(query).into_iter().for_each(|x| {response_chan.send(x).unwrap();})
         };
     }
 }
@@ -142,7 +140,7 @@ impl ShardedStorageBackend {
         let mut hasher = self.hasher.clone();
         hasher.write(line.as_bytes());
         let hash = hasher.finish();
-        self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line});
+        self.shards[hash as usize % self.shards.len()].send(BackendRequest::RawAddRequest {line}).unwrap();
     }
     
     // pub fn add(&self, record: record::Record) -> Option<u32> {
@@ -161,7 +159,7 @@ impl ShardedStorageBackend {
         r.into_iter().map(|f| f).collect()
     }
 
-    pub fn key_values_search(&self, search_query: record::KeyValuesSearch) -> HashSet<Box<str>> {
+    pub fn key_values_search(&self, search_query: query::KeyValuesSearch) -> HashSet<Arc<str>> {
         let (s, r) = bounded(1000);
         (&self.shards).into_iter().for_each(|shard| {shard.send(BackendRequest::KeyValuesSearchRequest {query: search_query.clone(), response_chan: s.clone()}).unwrap();});
         drop(s);

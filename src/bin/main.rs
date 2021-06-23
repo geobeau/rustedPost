@@ -17,13 +17,13 @@ static GLOBAL: MiMalloc = MiMalloc;
 fn display_timed_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, query: query::Search) {
     let now = Instant::now();
     let records = backend.read().unwrap().search(query.clone());
-    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH));
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(query::SearchFlags::OPTIMIZE_REGEX_SEARCH));
 }
 
-fn display_timed_key_query(backend: &Arc<RwLock<storage::ShardedStorageBackend>>, query: record::KeyValuesSearch) {
+fn display_timed_key_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, query: query::KeyValuesSearch) {
     let now = Instant::now();
     let records = backend.read().unwrap().key_values_search(query.clone());
-    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(record::QueryFlags::OPTIMIZE_REGEX_SEARCH));
+    info!("Searching ({}): yielded {} results in {}us ({}ms) (optimized: {})", &query, records.len(), now.elapsed().as_micros(), now.elapsed().as_millis(), query.query_flags.contains(query::SearchFlags::OPTIMIZE_REGEX_SEARCH));
     records.iter().for_each(|record|info!("Found: {}", record))
 }
 
@@ -114,32 +114,26 @@ async fn main() {
         query::SearchFlags::empty(),
     ));
 
-    // display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
-    //     record::SearchField::new_re("author_family_name", "[tT]olkien"),
-    //     record::SearchField::new_eq("language", "English")],
-    //     "title",
-    // ));
-
-    display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
-        record::SearchField::new_eq("language", "English")],
+    display_timed_key_query(&storage, query::KeyValuesSearch::new(vec![
+        query::Field::new_eq("language", "English")],
         "extension",
     ));
 
-    display_timed_key_query(&storage, record::KeyValuesSearch::new_with_flags(vec![
-        record::SearchField::new_eq("language", "English")],
+    display_timed_key_query(&storage, query::KeyValuesSearch::new_with_flags(vec![
+        query::Field::new_eq("language", "English")],
         "extension",
-        record::QueryFlags::ABORT_EARLY | record::QueryFlags::OPTIMIZE_REGEX_SEARCH,
+        query::SearchFlags::ABORT_EARLY | query::SearchFlags::OPTIMIZE_REGEX_SEARCH,
     ));
 
-    display_timed_key_query(&storage, record::KeyValuesSearch::new(vec![
-        record::SearchField::new_eq("language", "Breton")],
+    display_timed_key_query(&storage, query::KeyValuesSearch::new(vec![
+        query::Field::new_eq("language", "Breton")],
         "title",
     ));
 
-    display_timed_key_query(&storage, record::KeyValuesSearch::new_with_flags(vec![
-        record::SearchField::new_eq("language", "Breton")],
+    display_timed_key_query(&storage, query::KeyValuesSearch::new_with_flags(vec![
+        query::Field::new_eq("language", "Breton")],
         "title",
-        record::QueryFlags::ABORT_EARLY | record::QueryFlags::OPTIMIZE_REGEX_SEARCH,
+        query::SearchFlags::ABORT_EARLY | query::SearchFlags::OPTIMIZE_REGEX_SEARCH,
     ));
 
 
