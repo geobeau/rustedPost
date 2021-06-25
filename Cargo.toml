@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["full"] }
 warp = "0.3"
 smallstr = "0.2.0"
 smallvec = "1.6.1"
+clap = "3.0.0-beta.2"
 
 [dev-dependencies]
 criterion = "0.3"

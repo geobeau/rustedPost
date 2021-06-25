@@ -10,7 +10,7 @@ use ahash::{AHasher};
 use std::hash::Hasher;
 use hashbrown::HashSet;
 use crossbeam_channel::{Sender, Receiver, bounded};
-use log::{info};
+use log::{debug};
 
 pub struct SingleStorageBackend {
     store: store::RecordStore,
@@ -55,11 +55,11 @@ impl SingleStorageBackend {
     fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
         match self.index.key_values_search(&key_values_search_query) {
             index::KeyValuesSearchResult::Ok(x) => {
-                info!("Search in normal mode (index filtering)");
+                debug!("Search in normal mode (index filtering)");
                 return x
             },
             index::KeyValuesSearchResult::DirtyOk(x) => {
-                info!("Search in dirty mode (post filtering)");
+                debug!("Search in dirty mode (post filtering)");
                 x.iter().filter_map(|id| {
                     let record = match self.store.get(*id) {
                         Some(val) => val,
@@ -120,10 +120,8 @@ pub struct ShardedStorageBackend {
 }
 
 impl ShardedStorageBackend {
-    pub fn new() -> ShardedStorageBackend {
-        // Randomly chosen number of cpus
-        // TODO either discover or add it on the CLI
-        let num_cpu = 2;
+    pub fn new_with_cpus(num_cpu: u16) -> ShardedStorageBackend {
+        // TODO add auto discover feature
         let mut shards: Vec<Sender<BackendRequest>> = vec![];
         for _ in 0..num_cpu {
             let (s, r) = bounded(10000);
@@ -135,7 +133,7 @@ impl ShardedStorageBackend {
             hasher:  AHasher::new_with_keys(0,0)
         }
     }
-    
+
     pub fn raw_add(&self, line: String) {
         let mut hasher = self.hasher.clone();
         hasher.write(line.as_bytes());

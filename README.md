@@ -1,3 +1,5 @@
+Tiny in-memory database made to search accross milions of records very quickly
+
 # Rusted Post
 
 Rusted post is an index/search engine. It's goal is to quickly find record that matched N set of labels.
@@ -58,7 +60,7 @@ check the optimisation that were done in `PERFORMANCE.md`
 As of today, it's not usable as is as the data ingestion and search are hardcoded.
 
 ```
-cargo run .
+cargo run
 ```
 
 # Generating the dataset
