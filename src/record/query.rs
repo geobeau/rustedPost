@@ -1,10 +1,9 @@
-use serde::{Serialize, Deserialize};
-use std::{cmp::Eq};
-use std::fmt;
-use itertools::free::join;
 use bitflags::bitflags;
+use itertools::free::join;
+use serde::{Deserialize, Serialize};
+use std::cmp::Eq;
+use std::fmt;
 use std::str;
-
 
 bitflags! {
     pub struct SearchFlags: u8 {
@@ -25,14 +24,14 @@ pub struct Search {
 impl Search {
     pub fn new(search_fields: Vec<Field>) -> Search {
         Search {
-            search_fields: search_fields,
-            query_flags: SearchFlags::DEFAULT
+            search_fields,
+            query_flags: SearchFlags::DEFAULT,
         }
     }
     pub fn new_with_flags(search_fields: Vec<Field>, flags: SearchFlags) -> Search {
         Search {
-            search_fields: search_fields,
-            query_flags:flags
+            search_fields,
+            query_flags: flags,
         }
     }
 }
@@ -53,35 +52,38 @@ pub struct KeyValuesSearch {
 impl KeyValuesSearch {
     pub fn new(search_fields: Vec<Field>, key: &str) -> KeyValuesSearch {
         KeyValuesSearch {
-            search_fields: search_fields,
+            search_fields,
             key_field: Box::from(key),
-            query_flags: SearchFlags::DEFAULT
+            query_flags: SearchFlags::DEFAULT,
         }
     }
-    
+
     pub fn new_with_flags(search_fields: Vec<Field>, key: &str, new_with_flags: SearchFlags) -> KeyValuesSearch {
         KeyValuesSearch {
-            search_fields: search_fields,
+            search_fields,
             key_field: Box::from(key),
-            query_flags: new_with_flags
+            query_flags: new_with_flags,
         }
     }
 
     pub fn to_search_query(&self) -> Search {
         Search {
             search_fields: self.search_fields.clone(),
-            query_flags: SearchFlags::DEFAULT
+            query_flags: SearchFlags::DEFAULT,
         }
     }
 }
 
 impl fmt::Display for KeyValuesSearch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} by {}", join(self.search_fields.clone().into_iter().map(|f| format!("{}", f)), ", "), self.key_field)
+        write!(
+            f,
+            "{} by {}",
+            join(self.search_fields.clone().into_iter().map(|f| format!("{}", f)), ", "),
+            self.key_field
+        )
     }
 }
-
-
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Field {
@@ -117,7 +119,7 @@ impl Field {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Operation {
     Eq,
-    Re
+    Re,
 }
 
 impl fmt::Display for Operation {

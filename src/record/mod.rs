@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
-use std::{cmp::Eq};
-use std::fmt;
 use itertools::free::join;
-use std::sync::Arc;
-use std::str;
+use serde::{Deserialize, Serialize};
 use smallstr::SmallString;
 use smallvec::SmallVec;
+use std::cmp::Eq;
+use std::fmt;
+use std::str;
+use std::sync::Arc;
 
 pub mod query;
 
@@ -18,7 +18,7 @@ pub struct Record {
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LabelPair {
     pub key: Box<str>,
-    pub val: Box<str>
+    pub val: Box<str>,
 }
 
 impl LabelPair {
@@ -42,11 +42,10 @@ impl fmt::Display for RCRecord {
     }
 }
 
-
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RCLabelPair {
     pub key: Arc<str>,
-    pub val: Arc<str>
+    pub val: Arc<str>,
 }
 
 impl RCLabelPair {

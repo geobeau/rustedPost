@@ -1,6 +1,6 @@
 use hashbrown::{HashMap, HashSet};
+use log::info;
 use std::sync::Arc;
-use log::{info};
 
 use super::record;
 
@@ -15,17 +15,20 @@ impl RecordStore {
         RecordStore {
             id_store: Vec::new(),
             hash_store: HashMap::new(),
-            symbol_store: HashSet::new()
+            symbol_store: HashSet::new(),
         }
     }
 
     fn new_rcrecord_from(&mut self, record: &record::SmallRecord) -> record::RCRecord {
-        let label_pairs = (&record.label_pairs).into_iter().map(|l| {
-           let key = self.symbol_store.get_or_insert(Arc::from(l.key.as_str())).clone();
-           let val = self.symbol_store.get_or_insert(Arc::from(l.val.as_str())).clone();
-           record::RCLabelPair{key: key, val: val}
-        }).collect();
-        record::RCRecord{label_pairs: label_pairs}
+        let label_pairs = (&record.label_pairs)
+            .into_iter()
+            .map(|l| {
+                let key = self.symbol_store.get_or_insert(Arc::from(l.key.as_str())).clone();
+                let val = self.symbol_store.get_or_insert(Arc::from(l.val.as_str())).clone();
+                record::RCLabelPair { key, val }
+            })
+            .collect();
+        record::RCRecord { label_pairs }
     }
 
     pub fn add(&mut self, original_record: &record::SmallRecord) -> Option<(u32, Arc<record::RCRecord>)> {
@@ -36,12 +39,11 @@ impl RecordStore {
             _ => {
                 let rc = Arc::new(new_record);
                 self.id_store.push(rc.clone());
-                let id = (self.id_store.len() -1) as u32;
+                let id = (self.id_store.len() - 1) as u32;
                 self.hash_store.insert(rc.clone(), id);
                 Some((id, rc.clone()))
             }
         }
-        
     }
 
     pub fn get(&self, id: u32) -> Option<Arc<record::RCRecord>> {
@@ -52,7 +54,12 @@ impl RecordStore {
     }
 
     pub fn print_status(&self) {
-        info!("Size of structs: symbols: {}, hashes: {}, ids: {}", self.symbol_store.len(), self.hash_store.len(), self.id_store.len());
+        info!(
+            "Size of structs: symbols: {}, hashes: {}, ids: {}",
+            self.symbol_store.len(),
+            self.hash_store.len(),
+            self.id_store.len()
+        );
     }
 
     pub fn multi_get(&self, ids: Vec<u32>) -> Vec<Arc<record::RCRecord>> {
