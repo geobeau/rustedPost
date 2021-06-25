@@ -13,3 +13,4 @@ data/dataset.csv
 data/dataset.txt
 data/*.sqlite
 data/mysql2sqlite
+data/*.txt
