@@ -2,6 +2,7 @@ use super::record;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 use std::str;
+use logos::{Lexer, Logos};
 
 #[inline]
 fn next_non_space_char(chars: &[u8], start: usize) -> Option<usize> {
@@ -117,6 +118,76 @@ pub fn parse_small_record(l: &str) -> Option<record::SmallRecord> {
     return Some(record::SmallRecord { label_pairs });
 }
 
+
+#[derive(Logos, Debug, PartialEq)]
+enum Token {
+    #[token("{")]
+    OpeningBracket,
+    #[token("}")]
+    ClosingBracket,
+    #[token("=")]
+    Equal,
+    #[token(",")]
+    Comma,
+
+    #[regex("[a-zA-Z-_]+")]
+    Literal,
+
+    // TL;DR: parse a string enclosed in quotes, works with escaped quotes as well
+    #[regex(r#""(?:[^"\\]|\\.)*""#)]
+    ValueLiteral,
+
+    #[error]
+    #[regex(r"[ \t\f]+", logos::skip)]
+    Error,
+}
+
+
+fn parse_labels(mut lex: Lexer<Token>) -> Option<SmallVec<[record::SmallLabelPair; 16]>>  {
+    let mut label_pairs = SmallVec::new();
+    loop {  
+        let key = match lex.next() {
+            Some(Token::Literal) => lex.slice(),
+            _ => break,
+        };
+
+        match lex.next() {
+            Some(Token::Equal) => (),
+            _ => break,
+        };
+
+        let val   = match lex.next() {
+            Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
+            _ => break,
+        };
+        let lp = record::SmallLabelPair {
+            key: SmallString::from_str(key),
+            val: SmallString::from_str(val),
+        };
+        label_pairs.push(lp);
+
+        match lex.next() {
+            Some(Token::Comma) => continue,
+            Some(Token::ClosingBracket) => return Some(label_pairs),
+            _ => break,
+        };
+
+    }
+    return None
+}
+
+
+#[inline]
+pub fn parse_record_logos(l: &str) -> Option<record::SmallRecord> {
+    let mut lex = Token::lexer(l);
+    let label_pairs = match lex.next() {
+        Some(Token::OpeningBracket) => parse_labels(lex),
+        _ => return None,
+        
+    }.unwrap();
+    return Some(record::SmallRecord { label_pairs });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,8 +195,7 @@ mod tests {
     #[test]
     fn it_works() {
         let field = "{author_family_name=\"Daniels\", author_first_name=\"B\",author_surname=\"J\", language=\"English\", year=\"0\", extension=\"rar\", title=\"Stolen Moments\",publisher=\"\",edition=\"\"}";
-
-        assert!(parse_record(field).is_some())
+        assert!(parse_record_logos(field).is_some())
     }
 
     #[test]

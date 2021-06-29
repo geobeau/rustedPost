@@ -27,6 +27,9 @@ warp = "0.3"
 smallstr = "0.2.0"
 smallvec = "1.6.1"
 clap = "3.0.0-beta.2"
+opentelemetry = "0.15.0"
+opentelemetry-prometheus = "0.8.0"
+logos = "0.12.0"
 
 [dev-dependencies]
 criterion = "0.3"
