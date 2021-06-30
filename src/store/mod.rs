@@ -23,8 +23,8 @@ impl RecordStore {
         let label_pairs = (&record.label_pairs)
             .into_iter()
             .map(|l| {
-                let key = self.symbol_store.get_or_insert(Arc::from(l.key.as_str())).clone();
-                let val = self.symbol_store.get_or_insert(Arc::from(l.val.as_str())).clone();
+                let key = self.symbol_store.get_or_insert_with(l.key.as_str(), |x| Arc::from(x)).clone();
+                let val = self.symbol_store.get_or_insert_with(l.val.as_str(), |x| Arc::from(x)).clone();
                 record::RCLabelPair { key, val }
             })
             .collect();
