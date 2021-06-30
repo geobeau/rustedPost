@@ -15,6 +15,11 @@ bitflags! {
     }
 }
 
+pub enum Query {
+    Simple(Search),
+    KeyValues(KeyValuesSearch)
+}
+
 #[derive(Clone, Debug)]
 pub struct Search {
     pub search_fields: Vec<Field>,
