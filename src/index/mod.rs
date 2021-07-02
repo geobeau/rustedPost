@@ -97,7 +97,7 @@ impl Index {
 
     pub fn insert_record(&mut self, id: u32, record: &record::RCRecord) {
         for pair in &record.label_pairs {
-            let field = self.label_key_index.entry(pair.key.clone()).or_insert(Field::new());
+            let field = self.label_key_index.entry(pair.key.clone()).or_insert_with(|| Field::new());
             field.add_posting(pair.val.clone(), id);
         }
     }
@@ -114,7 +114,7 @@ impl<'a> Field {
     }
 
     fn add_posting(&mut self, key: Arc<str>, id: u32) {
-        let posting_list = self.field_map.entry(key).or_insert(RoaringBitmap::new());
+        let posting_list = self.field_map.entry(key).or_insert_with(|| RoaringBitmap::new());
         posting_list.insert(id);
     }
 

@@ -254,10 +254,10 @@ mod tests {
 
     #[test]
     fn parse_record_works_with_quote() {
-        let quote_field = "{author_family_name=\"Dan\\\"iels\"}";
+        let quote_field = r#"{author_family_name="Dan\"iels"}"#;
         parse_record(quote_field);
         assert!(parse_record(quote_field).is_some());
-        let escaped_quote_field = "{author_family_name=\"Dan\\\"iels\\\\\"}";
+        let escaped_quote_field =  r#"{author_family_name="Dan\"iels\\"}"#;
         parse_record(escaped_quote_field);
         assert!(parse_record(escaped_quote_field).is_some());
     }

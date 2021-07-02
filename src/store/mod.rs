@@ -21,7 +21,7 @@ impl RecordStore {
 
     fn new_rcrecord_from(&mut self, record: &record::SmallRecord) -> record::RCRecord {
         let label_pairs = (&record.label_pairs)
-            .into_iter()
+            .iter()
             .map(|l| {
                 let key = self.symbol_store.get_or_insert_with(l.key.as_str(), |x| Arc::from(x)).clone();
                 let val = self.symbol_store.get_or_insert_with(l.val.as_str(), |x| Arc::from(x)).clone();
