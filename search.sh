@@ -1,1 +1,1 @@
-time curl 127.0.0.1:8080/search -H "Content-Type: application/json" -v -d '[{"key":"author_family_name","val":"Tolkien","op":"Eq"}]'
+time curl 127.0.0.1:8080/search/ -H "Content-Type: application/json" -v -d '{"query":"label_values({author_family_name==\"Tolkien\"}, \"title\")"}'

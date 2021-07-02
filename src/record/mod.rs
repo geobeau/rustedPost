@@ -31,7 +31,7 @@ impl LabelPair {
 }
 
 /////////////////////////// RC RECORDS ///////////////////////////
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RCRecord {
     pub label_pairs: Vec<RCLabelPair>,
 }
@@ -42,7 +42,7 @@ impl fmt::Display for RCRecord {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RCLabelPair {
     pub key: Arc<str>,
     pub val: Arc<str>,

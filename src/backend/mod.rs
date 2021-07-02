@@ -177,7 +177,7 @@ impl ShardedStorageBackend {
         r.into_iter().map(|f| f).collect()
     }
 
-    pub fn key_values_search(&self, search_query: query::KeyValuesSearch) -> HashSet<Arc<str>> {
+    pub fn key_values_search(&self, search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
         let (s, r) = bounded(1000);
         (&self.shards).into_iter().for_each(|shard| {
             shard
@@ -188,7 +188,8 @@ impl ShardedStorageBackend {
                 .unwrap();
         });
         drop(s);
-        r.into_iter().map(|f| f).collect()
+        let result: HashSet<Arc<str>> = r.into_iter().map(|f| f).collect();
+        result.into_iter().collect()
     }
 
     pub fn wait_pending_operations(&self) {

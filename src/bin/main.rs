@@ -3,8 +3,9 @@ use fern;
 use log;
 use log::{debug, error, info};
 use mimalloc::MiMalloc;
-use rusted_post::backend;
+use rusted_post::{backend, lexer};
 use rusted_post::record::query;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::sync::{Arc, RwLock};
@@ -66,6 +67,12 @@ fn load_data_from_file(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, fi
         ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32
     );
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RawAPIQuery {
+    pub query: String
+}
+
 
 #[tokio::main]
 async fn main() {
@@ -304,10 +311,15 @@ async fn main() {
     let search = warp::post()
         .and(warp::path("search"))
         .and(warp::body::json())
-        .map(move |search: Vec<query::Field>| {
-            let search_query = query::Search::new(search);
-            display_timed_query(&storage, search_query);
-            warp::reply::reply()
+        .map(move |search: RawAPIQuery| {
+            let query = match lexer::parse_query(search.query.as_str()) {
+                Some(x) => x,
+                None => return warp::reply::json(&search),
+            };
+            match query {
+                query::Query::Simple(x) =>  warp::reply::json(&storage.read().unwrap().search(x)),
+                query::Query::KeyValues(x) =>  warp::reply::json(&storage.read().unwrap().key_values_search(x)),
+            }
         });
 
     warp::serve(search).run(([127, 0, 0, 1], 8080)).await;

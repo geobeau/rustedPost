@@ -43,7 +43,7 @@ impl Search {
 
 impl fmt::Display for Search {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", join(self.search_fields.clone().into_iter().map(|f| format!("{}", f)), ", "))
+        write!(f, "{{{}}}", join(self.search_fields.clone().into_iter().map(|f| format!("{}", f)), ", "))
     }
 }
 
@@ -83,7 +83,7 @@ impl fmt::Display for KeyValuesSearch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} by {}",
+            "label_values({{{}}},{})",
             join(self.search_fields.clone().into_iter().map(|f| format!("{}", f)), ", "),
             self.key_field
         )
