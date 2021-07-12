@@ -321,6 +321,9 @@ async fn main() {
                 query::Query::KeyValues(x) =>  warp::reply::json(&storage.read().unwrap().key_values_search(x)),
             }
         });
+    
 
-    warp::serve(search).run(([127, 0, 0, 1], 8080)).await;
+    let www_static = warp::get().and(warp::path::end()).and(warp::fs::dir("web/"));
+
+    warp::serve(www_static.or(search)).run(([127, 0, 0, 1], 8080)).await;
 }

@@ -1,0 +1,45 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Rusted Post</title>
+  <meta name="description" content="A simple HTML5 Template for new projects.">
+  <meta name="author" content="SitePoint">
+
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <link rel="stylesheet" href="css/styles.css?v=1.0">
+
+</head>
+
+<body>
+  <input type="text" id="expression" style="width: 500px;">
+  <button type="button" id="execute">Execute</button>
+  <div id="result"></div>
+</body>
+<script type="text/javascript">
+function execQuery() {
+  
+  var query = {
+    "query": document.getElementById("expression").value
+  }
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        // Typical action to be performed when the document is ready:
+        document.getElementById("result").innerHTML = xhttp.responseText;
+      }
+  };
+  xhttp.open("POST", "/search", true);
+  xhttp.setRequestHeader('Content-Type', 'application/json');
+  xhttp.send(JSON.stringify(query));
+}
+
+document.getElementById("execute").addEventListener("click", execQuery);
+</script>
+</html>
