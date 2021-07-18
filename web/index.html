@@ -14,25 +14,120 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <link rel="stylesheet" href="css/styles.css?v=1.0">
-
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <!-- Bootstrap core CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
-  <input type="text" id="expression" style="width: 500px;">
-  <button type="button" id="execute">Execute</button>
-  <div id="result"></div>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">Rusted Post</span>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">Search</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div class="container mt-4">
+    <input type="text" id="expression" style="width: 80%;">
+    <button type="button" id="execute" class="btn btn-primary">Execute</button>
+  </div>
+  <div id="result" class="container-fluid mt-4"></div>
 </body>
+<!-- JQuery -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<!-- Bootstrap tooltips -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+<!-- Bootstrap core JavaScript -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.2/js/bootstrap.min.js"></script>
 <script type="text/javascript">
-function execQuery() {
-  
-  var query = {
-    "query": document.getElementById("expression").value
+function extractKeys(dataset) {
+  var keys = new Set();
+  for (i in dataset) {
+    for (j in dataset[i].label_pairs) {
+      keys.add(dataset[i].label_pairs[j].key);
+    }
   }
+  return keys
+}
+
+function generateRow(row, keyColumnIndexMap) {
+  allColumnRow = Array(Object.keys(keyColumnIndexMap).length).fill("");
+  for (i in row.label_pairs) {
+    allColumnRow[keyColumnIndexMap[row.label_pairs[i].key]] = row.label_pairs[i].val;
+  }
+  htmlRow = document.createElement("tr");
+  var cell
+  for (i in allColumnRow) {
+    cell = document.createElement("td");
+    cell.appendChild(document.createTextNode(allColumnRow[i]));
+    htmlRow.appendChild(cell);
+  }
+  return htmlRow;
+}
+
+function generateHeader(keys) {
+  htmlRow = document.createElement("tr");  
+  var cell
+  for (i in keys) {
+    cell = document.createElement("th");
+    cell.textContent = keys[i];
+    cell.className = "th-sm";
+    htmlRow.appendChild(cell);
+  }
+  return htmlRow;
+}
+
+function toHtmlTable(dataset) {
+  var keys = Array.from(extractKeys(dataset)).sort();
+  var keyColumnIndexMap = {};
+  for (i in keys) {
+    keyColumnIndexMap[keys[i]] = i;
+  }
+  table = document.createElement("table");
+  table.className = "table table-striped table-bordered table-sm";
+  table.id = "result-table";
+  var thead = document.createElement("thead");
+  thead.appendChild(generateHeader(keys));
+  table.appendChild(thead);
+
+  var tbody = document.createElement("tbody");
+  for (i in dataset) {
+    tbody.appendChild(generateRow(dataset[i], keyColumnIndexMap))
+  }
+  table.appendChild(tbody);
+  return table;
+}
+
+function updateUrlQueryParam(query) {
+  var url = new URL(window.location.href);
+  url.searchParams.set('query', query);
+  window.history.pushState("", "", url);
+}
+
+function execQuery() {
+  var queryTxt = document.getElementById("expression").value;
+  var query = {
+    "query":queryTxt
+  }
+  updateUrlQueryParam(queryTxt);
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // Typical action to be performed when the document is ready:
-        document.getElementById("result").innerHTML = xhttp.responseText;
+        var response = JSON.parse(xhttp.responseText);
+        document.getElementById("result").innerHTML = "";
+        document.getElementById("result").appendChild(toHtmlTable(response));
       }
   };
   xhttp.open("POST", "/search", true);
@@ -40,6 +135,10 @@ function execQuery() {
   xhttp.send(JSON.stringify(query));
 }
 
+var url = new URL(window.location.href);
+document.getElementById("expression").value = url.searchParams.get('query');
+
 document.getElementById("execute").addEventListener("click", execQuery);
 </script>
+
 </html>
