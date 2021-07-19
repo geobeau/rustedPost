@@ -34,8 +34,8 @@ pub enum ResponseData {
 
 fn handle_search(search: RawAPIQuery, storage: Arc<RwLock<backend::ShardedStorageBackend>>) -> warp::reply::Json {
     let query = match lexer::parse_query(search.query.as_str()) {
-        Some(x) => x,
-        None => return warp::reply::json(&ErrorResponse{query: search.query, error: String::from("Parsing of query failed")}),
+        Ok(x) => x,
+        Err(x) => return warp::reply::json(&ErrorResponse{query: search.query, error: x}),
     };
     let data = match query {
         query::Query::Simple(x) => ResponseData::Records{data: storage.read().unwrap().search(x)},

@@ -112,22 +112,22 @@ enum Token {
 }
 
 
-fn parse_labels(lex: &mut Lexer<Token>) -> Option<SmallVec<[record::SmallLabelPair; 16]>>  {
+fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPair; 16]>, String>  {
     let mut label_pairs = SmallVec::new();
     loop {  
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
-            _ => break,
+            _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
         };
 
         match lex.next() {
             Some(Token::Equal) => (),
-            _ => break,
+            _ => return Err(format!("Error eq term: {} used instead of =", lex.slice())),
         };
 
         let val   = match lex.next() {
             Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-            _ => break,
+            _ => return Err(format!("Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
         };
         let lp = record::SmallLabelPair {
             key: SmallString::from_str(key),
@@ -137,33 +137,32 @@ fn parse_labels(lex: &mut Lexer<Token>) -> Option<SmallVec<[record::SmallLabelPa
 
         match lex.next() {
             Some(Token::Comma) => continue,
-            Some(Token::ClosingBraces) => return Some(label_pairs),
-            _ => break,
+            Some(Token::ClosingBraces) => return Ok(label_pairs),
+            _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
         };
 
     }
-    return None
 }
 
 
 #[inline]
-fn parse_search_fields(lex: &mut Lexer<Token>) -> Option<Vec<query::Field>> {
+fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, String> {
     let mut fields = Vec::new();
     loop {  
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
-            _ => break,
+            _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
         };
 
         let op = match lex.next() {
             Some(Token::DoubleEqual) => query::Operation::Eq,
             Some(Token::TildeEqual) => query::Operation::Re,
-            _ => break,
+            _ => return Err(format!("Error eq term: {} used instead of supported == (strict equal) or =~ (regex equal)", lex.slice())),
         };
 
         let val   = match lex.next() {
             Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-            _ => break,
+            _ => return Err(format!("Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
         };
         let lp = query::Field {
             key: Box::from(key),
@@ -174,71 +173,63 @@ fn parse_search_fields(lex: &mut Lexer<Token>) -> Option<Vec<query::Field>> {
 
         match lex.next() {
             Some(Token::Comma) => continue,
-            Some(Token::ClosingBraces) => return Some(fields),
-            _ => break,
+            Some(Token::ClosingBraces) => return Ok(fields),
+            _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
         };
-
     }
-    return None
 }
 
 #[inline]
-fn parse_fn_search_fields(lex: &mut Lexer<Token>) -> Option<query::Query> {
-    let search_fields = match parse_search_fields(lex) {
-        Some(x) => x,
-        None => return None,
-    };
-    return Some(query::Query::Simple(query::Search { search_fields, query_flags: query::SearchFlags::DEFAULT }));
+fn parse_fn_search_fields(lex: &mut Lexer<Token>) -> Result<query::Query, String> {
+    let search_fields = parse_search_fields(lex)?;
+    return Ok(query::Query::Simple(query::Search { search_fields, query_flags: query::SearchFlags::DEFAULT }));
 }
 
 #[inline]
-fn parse_fn_label_values(lex: &mut Lexer<Token>) -> Option<query::Query> {
+fn parse_fn_label_values(lex: &mut Lexer<Token>) -> Result<query::Query, String> {
     match lex.next() {
         Some(Token::OpeningParenthesis) => (),
-        _ => return None,
+        _ => return Err(format!("Error bad function start: {} instead of (", lex.slice())),
     };
     match lex.next() {
         Some(Token::OpeningBraces) => (),
-        _ => return None,
+        _ => return Err(format!("Error first argument of label_values is a search: {} instead of {{<my-search>}}", lex.slice())),
     };
-    let search_fields = match parse_search_fields(lex) {
-        Some(x) => x,
-        None => return None,
-    };
+    let search_fields = parse_search_fields(lex)?;
     match lex.next() {
         Some(Token::Comma) => (),
-        _ => return None,
+        _ => return Err(format!("Error missing , after search: {} instead of , (expecting the key to extract values on)", lex.slice())),
     };
     let key_field = match lex.next() {
         Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-        _ => return None,
+        _ => return Err(format!("Error wrong format of key: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
     };
     match lex.next() {
         Some(Token::ClosingParenthesis) => (),
-        _ => return None,
+        _ => return Err(format!("Error bad function end: {} instead of )", lex.slice())),
     };
-    return Some(query::Query::KeyValues(query::KeyValuesSearch { search_fields, query_flags: query::SearchFlags::DEFAULT, key_field: Box::from(key_field) }));
+    return Ok(query::Query::KeyValues(query::KeyValuesSearch { search_fields, query_flags: query::SearchFlags::DEFAULT, key_field: Box::from(key_field) }));
 }
 
 
 #[inline]
-pub fn parse_record(l: &str) -> Option<record::SmallRecord> {
+pub fn parse_record(l: &str) -> Result<record::SmallRecord, String> {
     let mut lex = Token::lexer(l);
     let label_pairs = match lex.next() {
         Some(Token::OpeningBraces) => parse_labels(&mut lex),
-        _ => return None,
+        _ => return Err(format!("Error wrong format for a record: {} but should start with {{", lex.slice())),
         
-    }.unwrap();
-    return Some(record::SmallRecord { label_pairs });
+    }?;
+    return Ok(record::SmallRecord { label_pairs });
 }  
 
 #[inline]
-pub fn parse_query(l: &str) -> Option<query::Query> {
+pub fn parse_query(l: &str) -> Result<query::Query, String> {
     let mut lex = Token::lexer(l);
     match lex.next() {
         Some(Token::OpeningBraces) => parse_fn_search_fields(&mut lex),
         Some(Token::FnLabelValues) => parse_fn_label_values(&mut lex),
-        _ => None,  
+        _ => Err(format!("Error in search fuction: {}, should either start with {{ or with a function name (label_values)", lex.slice())),  
     }
 }
 
@@ -249,25 +240,25 @@ mod tests {
     #[test]
     fn parse_record_works() {
         let field = r#"{author_family_name="Daniels", author_first_name="B",author_surname="J", language="English", year="0", extension="rar", title="Stolen Moments",publisher="",edition=""}"#;
-        assert!(parse_record(field).is_some())
+        assert!(parse_record(field).is_ok())
     }
 
     #[test]
     fn parse_record_works_with_quote() {
         let quote_field = r#"{author_family_name="Dan\"iels"}"#;
-        parse_record(quote_field);
-        assert!(parse_record(quote_field).is_some());
+        parse_record(quote_field).unwrap();
+        assert!(parse_record(quote_field).is_ok());
         let escaped_quote_field =  r#"{author_family_name="Dan\"iels\\"}"#;
-        parse_record(escaped_quote_field);
-        assert!(parse_record(escaped_quote_field).is_some());
+        parse_record(escaped_quote_field).unwrap();
+        assert!(parse_record(escaped_quote_field).is_ok());
     }
 
     #[test]
     fn parse_query_works() {
         let mut field = parse_query(r#"{author_family_name=="Tolkien", language=~"English", extension=="epub"}"#);
-        assert!(field.is_some());
+        assert!(field.is_ok());
         field = parse_query(r#"label_values({author_family_name=="Tolkien", language=~"English", extension=="epub"}, "extension")"#);
-        assert!(field.is_some());
+        assert!(field.is_ok());
         match field.unwrap() {
             query::Query::KeyValues(x) => assert!(x.key_field == Box::from("extension")),
             _ => panic!("Wrong query parsed"),

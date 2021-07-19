@@ -20,7 +20,7 @@ pub struct SingleStorageBackend {
 impl SingleStorageBackend {
     pub fn raw_add(&mut self, line: String) {
         let result = lexer::parse_record(line.as_str());
-        if result.is_none() {
+        if result.is_err() {
             println!("{}", line);
             return;
         }

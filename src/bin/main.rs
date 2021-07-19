@@ -11,7 +11,6 @@ use std::io::{self, BufRead};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use std::vec;
-use futures::executor::block_on;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -302,5 +301,5 @@ async fn main() {
     }
 
     // storage.print_status();
-    api::serve(([127, 0, 0, 1], 8080), storage).await;
+    api::serve(([0, 0, 0, 0], 8080), storage).await;
 }
