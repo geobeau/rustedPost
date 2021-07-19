@@ -28,6 +28,7 @@ smallstr = "0.2.0"
 smallvec = "1.6.1"
 clap = "3.0.0-beta.2"
 logos = "0.12.0"
+futures = "0.3"
 
 [dev-dependencies]
 criterion = "0.3"

@@ -3,15 +3,15 @@ use fern;
 use log;
 use log::{debug, error, info};
 use mimalloc::MiMalloc;
-use rusted_post::{backend, lexer};
+use rusted_post::{backend};
 use rusted_post::record::query;
-use serde::{Deserialize, Serialize};
+use rusted_post::api;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use std::vec;
-use warp::Filter;
+use futures::executor::block_on;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -66,11 +66,6 @@ fn load_data_from_file(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, fi
         now.elapsed().as_millis(),
         ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32
     );
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RawAPIQuery {
-    pub query: String
 }
 
 
@@ -307,23 +302,5 @@ async fn main() {
     }
 
     // storage.print_status();
-
-    let search = warp::post()
-        .and(warp::path("search"))
-        .and(warp::body::json())
-        .map(move |search: RawAPIQuery| {
-            let query = match lexer::parse_query(search.query.as_str()) {
-                Some(x) => x,
-                None => return warp::reply::json(&search),
-            };
-            match query {
-                query::Query::Simple(x) =>  warp::reply::json(&storage.read().unwrap().search(x)),
-                query::Query::KeyValues(x) =>  warp::reply::json(&storage.read().unwrap().key_values_search(x)),
-            }
-        });
-    
-
-    let www_static = warp::get().and(warp::path::end()).and(warp::fs::dir("web/"));
-
-    warp::serve(www_static.or(search)).run(([127, 0, 0, 1], 8080)).await;
+    api::serve(([127, 0, 0, 1], 8080), storage).await;
 }
