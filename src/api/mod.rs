@@ -1,11 +1,12 @@
 
-use warp::Filter;
+use warp::{Filter, Reply, Rejection};
 use crate::{backend, lexer};
 use crate::record::query;
 use crate::record;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 use std::net::SocketAddr;
+use prometheus::{self, Encoder};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RawAPIQuery {
@@ -32,6 +33,25 @@ pub enum ResponseData {
     Values {data: Vec<Arc<str>>}
 }
 
+async fn metrics_handler() -> Result<impl Reply, Rejection> {
+    let encoder = prometheus::TextEncoder::new();
+
+    let mut buffer = Vec::new();
+    if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
+        eprintln!("could not encode prometheus metrics: {}", e);
+    };
+    let res = match String::from_utf8(buffer.clone()) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("prometheus metrics could not be from_utf8'd: {}", e);
+            String::default()
+        }
+    };
+    buffer.clear();
+
+    Ok(res)
+}
+
 fn handle_search(search: RawAPIQuery, storage: Arc<RwLock<backend::ShardedStorageBackend>>) -> warp::reply::Json {
     let query = match lexer::parse_query(search.query.as_str()) {
         Ok(x) => x,
@@ -54,6 +74,8 @@ pub async fn serve(addr: impl Into<SocketAddr>, storage: Arc<RwLock<backend::Sha
         handle_search(search, storage.clone())
     });
 
+    let prometheus = warp::get().and(warp::path("metrics")).and_then(metrics_handler);
+
     let www_static = warp::get().and(warp::path::end()).and(warp::fs::dir("web/"));
-    warp::serve(www_static.or(search)).run(addr).await;
+    warp::serve(www_static.or(search).or(prometheus)).run(addr).await;
 }

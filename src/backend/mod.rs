@@ -3,6 +3,7 @@ use super::lexer;
 use super::record;
 use super::record::query;
 use super::store;
+use super::telemetry::{LOCAL_SHARD_LATENCY_HISTOGRAM};
 
 use ahash::AHasher;
 use crossbeam_channel::{bounded, Receiver, Sender};
@@ -11,6 +12,7 @@ use log::debug;
 use std::hash::Hasher;
 use std::sync::Arc;
 use std::thread::spawn;
+use std::time::Instant;
 
 pub struct SingleStorageBackend {
     store: store::RecordStore,
@@ -107,19 +109,27 @@ enum BackendRequest {
 
 fn shard_handler(request_rcv: Receiver<BackendRequest>) {
     let mut backend = SingleStorageBackend::new();
+    let mut start;
+    let mut request;
     loop {
-        match request_rcv.recv().unwrap() {
+        request = request_rcv.recv().unwrap();
+        start = Instant::now();
+        match request {
             BackendRequest::RawAddRequest { line } => {
                 backend.raw_add(line);
+                LOCAL_SHARD_LATENCY_HISTOGRAM.raw_add.observe(start.elapsed().as_millis() as f64);
             }
             BackendRequest::AddRequest { record, response_chan } => {
                 response_chan.send(backend.add(record)).unwrap();
+                LOCAL_SHARD_LATENCY_HISTOGRAM.add.observe(start.elapsed().as_millis() as f64);
             }
             BackendRequest::SearchRequest { query, response_chan } => backend.search(query).into_iter().for_each(|x| {
                 response_chan.send(x).unwrap();
+                LOCAL_SHARD_LATENCY_HISTOGRAM.search.observe(start.elapsed().as_millis() as f64);
             }),
             BackendRequest::KeyValuesSearchRequest { query, response_chan } => backend.key_values_search(query).into_iter().for_each(|x| {
                 response_chan.send(x).unwrap();
+                LOCAL_SHARD_LATENCY_HISTOGRAM.key_values_search.observe(start.elapsed().as_millis() as f64);
             }),
         };
     }

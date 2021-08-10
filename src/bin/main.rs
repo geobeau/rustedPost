@@ -6,6 +6,7 @@ use mimalloc::MiMalloc;
 use rusted_post::{backend};
 use rusted_post::record::query;
 use rusted_post::api;
+use rusted_post::telemetry::{INIT_FILE_RECORDS_APPENDED};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::sync::{Arc, RwLock};
@@ -47,20 +48,18 @@ fn load_data_from_file(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, fi
     let file = File::open(filename).unwrap();
 
     let mut total_count = 0;
-    let mut success_count = 0;
     let now = Instant::now();
 
     let storage_guard = backend.read().unwrap();
     io::BufReader::new(file).lines().for_each(|line| {
         storage_guard.raw_add(line.unwrap());
         // Multithread system is fire and forget
-        success_count += 1;
+        INIT_FILE_RECORDS_APPENDED.inc();
         total_count += 1;
     });
     storage_guard.wait_pending_operations();
     info!(
-        "Loaded {} out of {} lines in {}ms ({}us per record)",
-        success_count,
+        "Loaded {} lines in {}ms ({}us per record)",
         total_count,
         now.elapsed().as_millis(),
         ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32
