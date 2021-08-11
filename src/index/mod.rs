@@ -9,6 +9,7 @@ use regex_syntax::Parser;
 use roaring::RoaringBitmap;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 
 pub enum KeyValuesSearchResult {
     Err(&'static str),
@@ -21,6 +22,10 @@ pub enum KeyValuesSearchResult {
 pub struct Index {
     label_key_index: HashMap<Arc<str>, Field>,
 }
+
+// Boilerplate for index status
+#[derive(Serialize, Deserialize)]
+pub struct IndexStatus {}
 
 impl Index {
     pub fn new() -> Index {
@@ -101,7 +106,12 @@ impl Index {
             field.add_posting(pair.val.clone(), id);
         }
     }
+
+    pub fn get_status(&self) -> IndexStatus {
+        IndexStatus{}
+    }
 }
+
 
 #[derive(Clone)]
 struct Field {

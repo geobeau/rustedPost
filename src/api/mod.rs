@@ -65,17 +65,28 @@ fn handle_search(search: RawAPIQuery, storage: Arc<RwLock<backend::ShardedStorag
     warp::reply::json(&response)
 }
 
+fn handle_status(storage: Arc<RwLock<backend::ShardedStorageBackend>>) -> warp::reply::Json {
+    let per_shard_status = storage.read().unwrap().get_status();
+    warp::reply::json(&per_shard_status)
+}
+
 
 pub async fn serve(addr: impl Into<SocketAddr>, storage: Arc<RwLock<backend::ShardedStorageBackend>>) {
+    let mut storage_clone = storage.clone();
     let search = warp::post()
     .and(warp::path("search"))
     .and(warp::body::json())
     .map(move |search: RawAPIQuery| {
-        handle_search(search, storage.clone())
+        handle_search(search, storage_clone.clone())
+    });
+
+    storage_clone = storage.clone();
+    let status = warp::get().and(warp::path("status"))
+    .map(move || {
+        handle_status(storage_clone.clone())
     });
 
     let prometheus = warp::get().and(warp::path("metrics")).and_then(metrics_handler);
-
     let www_static = warp::get().and(warp::path::end()).and(warp::fs::dir("web/"));
-    warp::serve(www_static.or(search).or(prometheus)).run(addr).await;
+    warp::serve(www_static.or(search).or(prometheus).or(status)).run(addr).await;
 }

@@ -1,6 +1,7 @@
 use hashbrown::{HashMap, HashSet};
 use log::info;
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 
 use super::record;
 
@@ -8,6 +9,16 @@ pub struct RecordStore {
     id_store: Vec<Arc<record::RCRecord>>,
     hash_store: HashMap<Arc<record::RCRecord>, u32>,
     symbol_store: HashSet<Arc<str>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RecordStoreStatus {
+    symbol_store_size: usize,
+    symbol_store_hashtable_capacity: usize,
+    hash_store_size: usize,
+    hash_store_hashtable_capacity: usize,
+    id_store_size: usize,
+    id_store_hashtable_capacity: usize,
 }
 
 impl RecordStore {
@@ -60,6 +71,17 @@ impl RecordStore {
             self.hash_store.len(),
             self.id_store.len()
         );
+    }
+
+    pub fn get_status(&self) -> RecordStoreStatus {
+        RecordStoreStatus {
+            symbol_store_size: self.symbol_store.len(),
+            hash_store_size: self.hash_store.len(),
+            id_store_size: self.id_store.len(),
+            symbol_store_hashtable_capacity: self.symbol_store.capacity(),
+            hash_store_hashtable_capacity: self.hash_store.capacity(),
+            id_store_hashtable_capacity: self.id_store.capacity(),
+        }
     }
 
     pub fn multi_get(&self, ids: Vec<u32>) -> Vec<Arc<record::RCRecord>> {

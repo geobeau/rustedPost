@@ -13,10 +13,19 @@ use std::hash::Hasher;
 use std::sync::Arc;
 use std::thread::spawn;
 use std::time::Instant;
+use serde::{Deserialize, Serialize};
 
 pub struct SingleStorageBackend {
+    shard_id: u16,
     store: store::RecordStore,
     index: index::Index,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SingleStorageBackendStatus {
+    shard_id: u16,
+    store_status: store::RecordStoreStatus,
+    index_status: index::IndexStatus,
 }
 
 impl SingleStorageBackend {
@@ -32,8 +41,9 @@ impl SingleStorageBackend {
 }
 
 impl SingleStorageBackend {
-    fn new() -> SingleStorageBackend {
+    fn new(shard_id: u16) -> SingleStorageBackend {
         SingleStorageBackend {
+            shard_id: shard_id,
             store: store::RecordStore::new(),
             index: index::Index::new(),
         }
@@ -87,9 +97,20 @@ impl SingleStorageBackend {
     fn print_status(&self) {
         self.store.print_status();
     }
+
+    fn get_status(&self) -> SingleStorageBackendStatus {
+        SingleStorageBackendStatus {
+            shard_id: self.shard_id,
+            store_status: self.store.get_status(),
+            index_status: self.index.get_status(),
+        }
+    }
 }
 
 enum BackendRequest {
+    StatusRequest {
+        response_chan: Sender<SingleStorageBackendStatus>,
+    },
     RawAddRequest {
         line: String,
     },
@@ -107,14 +128,17 @@ enum BackendRequest {
     },
 }
 
-fn shard_handler(request_rcv: Receiver<BackendRequest>) {
-    let mut backend = SingleStorageBackend::new();
+fn shard_handler(request_rcv: Receiver<BackendRequest>, shard_id: u16) {
+    let mut backend = SingleStorageBackend::new(shard_id);
     let mut start;
     let mut request;
     loop {
         request = request_rcv.recv().unwrap();
         start = Instant::now();
         match request {
+            BackendRequest::StatusRequest {response_chan} => {
+                response_chan.send(backend.get_status());
+            },
             BackendRequest::RawAddRequest { line } => {
                 backend.raw_add(line);
                 LOCAL_SHARD_LATENCY_HISTOGRAM.raw_add.observe(start.elapsed().as_secs_f64());
@@ -148,9 +172,9 @@ impl ShardedStorageBackend {
     pub fn new_with_cpus(num_cpu: u16) -> ShardedStorageBackend {
         // TODO add auto discover feature
         let mut shards: Vec<Sender<BackendRequest>> = vec![];
-        for _ in 0..num_cpu {
+        for i in 0..num_cpu {
             let (s, r) = bounded(10000);
-            spawn(move || shard_handler(r));
+            spawn(move || shard_handler(r, i));
             shards.push(s);
         }
         ShardedStorageBackend {
@@ -177,6 +201,19 @@ impl ShardedStorageBackend {
     //     r.recv().unwrap()
     // }
 
+    pub fn get_status(&self) -> Vec<SingleStorageBackendStatus> {
+        let (s, r) = bounded(self.shards.len());
+        (&self.shards).into_iter().for_each(|shard| {
+            shard
+                .send(BackendRequest::StatusRequest {
+                    response_chan: s.clone(),
+                })
+                .unwrap();
+        });
+        drop(s);
+        r.into_iter().map(|f| f).collect()
+    }
+    
     pub fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1000);
         (&self.shards).into_iter().for_each(|shard| {
