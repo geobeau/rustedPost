@@ -18,10 +18,11 @@ make_auto_flush_static_metric! {
 lazy_static! {
     pub static ref SHARD_LATENCY_HISTOGRAM: HistogramVec =
         register_histogram_vec ! (
-            "shard_operation_latency_ms",
+            "shard_operation_latency",
             "Histogram of latency of executing an operation at shard level",
             & ["operation"],
-            exponential_buckets(0.0001, 2.0, 20).unwrap()
+            vec![0.000_001, 0.000_0025, 0.000_005, 0.000_01,  0.000_025,  0.000_05, 0.000_1, 0.000_25,
+                 0.000_5, 0.001, 0.0025, 0.005, 0.010, 0.050, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
         ).unwrap();
 }
 

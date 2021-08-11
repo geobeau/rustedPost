@@ -117,20 +117,24 @@ fn shard_handler(request_rcv: Receiver<BackendRequest>) {
         match request {
             BackendRequest::RawAddRequest { line } => {
                 backend.raw_add(line);
-                LOCAL_SHARD_LATENCY_HISTOGRAM.raw_add.observe(start.elapsed().as_millis() as f64);
+                LOCAL_SHARD_LATENCY_HISTOGRAM.raw_add.observe(start.elapsed().as_secs_f64());
             }
             BackendRequest::AddRequest { record, response_chan } => {
                 response_chan.send(backend.add(record)).unwrap();
-                LOCAL_SHARD_LATENCY_HISTOGRAM.add.observe(start.elapsed().as_millis() as f64);
+                LOCAL_SHARD_LATENCY_HISTOGRAM.add.observe(start.elapsed().as_secs_f64());
             }
-            BackendRequest::SearchRequest { query, response_chan } => backend.search(query).into_iter().for_each(|x| {
-                response_chan.send(x).unwrap();
-                LOCAL_SHARD_LATENCY_HISTOGRAM.search.observe(start.elapsed().as_millis() as f64);
-            }),
-            BackendRequest::KeyValuesSearchRequest { query, response_chan } => backend.key_values_search(query).into_iter().for_each(|x| {
-                response_chan.send(x).unwrap();
-                LOCAL_SHARD_LATENCY_HISTOGRAM.key_values_search.observe(start.elapsed().as_millis() as f64);
-            }),
+            BackendRequest::SearchRequest { query, response_chan } => {
+                backend.search(query).into_iter().for_each(|x| {
+                    response_chan.send(x).unwrap();
+                });
+                LOCAL_SHARD_LATENCY_HISTOGRAM.search.observe(start.elapsed().as_secs_f64());
+            },
+            BackendRequest::KeyValuesSearchRequest { query, response_chan } => {
+                backend.key_values_search(query).into_iter().for_each(|x| {
+                    response_chan.send(x).unwrap();
+                });
+                LOCAL_SHARD_LATENCY_HISTOGRAM.key_values_search.observe(start.elapsed().as_secs_f64());
+            },
         };
     }
 }
