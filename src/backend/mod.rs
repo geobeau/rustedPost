@@ -95,6 +95,7 @@ impl SingleStorageBackend {
         }
     }
 
+    #[allow(dead_code)]
     fn print_status(&self) {
         self.store.print_status();
     }
@@ -108,6 +109,7 @@ impl SingleStorageBackend {
     }
 }
 
+#[allow(dead_code)]
 enum BackendRequest {
     StatusRequest {
         response_chan: Sender<SingleStorageBackendStatus>,
@@ -138,7 +140,7 @@ fn shard_handler(request_rcv: Receiver<BackendRequest>, shard_id: u16) {
         start = Instant::now();
         match request {
             BackendRequest::StatusRequest {response_chan} => {
-                response_chan.send(backend.get_status());
+                response_chan.send(backend.get_status()).unwrap();
             },
             BackendRequest::RawAddRequest { line } => {
                 backend.raw_add(line);

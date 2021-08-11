@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 pub enum KeyValuesSearchResult {
     Err(&'static str),
     Ok(Vec<Arc<str>>),
