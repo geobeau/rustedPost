@@ -1,8 +1,9 @@
-use super::index;
+mod store;
+mod index;
+
 use super::lexer;
 use super::record;
 use super::record::query;
-use super::store;
 use super::telemetry::{LOCAL_SHARD_LATENCY_HISTOGRAM};
 
 use ahash::AHasher;
