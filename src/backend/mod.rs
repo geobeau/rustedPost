@@ -9,7 +9,7 @@ use super::telemetry::{LOCAL_SHARD_LATENCY_HISTOGRAM};
 use ahash::AHasher;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use hashbrown::HashSet;
-use log::debug;
+use log::{debug, error};
 use std::hash::Hasher;
 use std::sync::Arc;
 use std::thread::spawn;
@@ -32,12 +32,10 @@ pub struct SingleStorageBackendStatus {
 impl SingleStorageBackend {
     pub fn raw_add(&mut self, line: String) {
         let result = lexer::parse_record(line.as_str());
-        if result.is_err() {
-            println!("{}", line);
-            return;
-        }
-
-        self.add(result.unwrap());
+        match result {
+            Ok(r) => {self.add(r);},
+            Err(e) => {error!("‡{} (on record {})", e, line);},
+        };
     }
 }
 

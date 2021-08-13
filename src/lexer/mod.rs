@@ -99,7 +99,7 @@ enum Token {
     #[token("label_values")]
     FnLabelValues,
 
-    #[regex("[a-zA-Z-_]+")]
+    #[regex("[a-zA-Z0-9-_]+")]
     Literal,
 
     // TL;DR: parse a string enclosed in quotes, works with escaped quotes as well
