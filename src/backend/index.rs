@@ -64,7 +64,7 @@ impl Index {
     }
 
     fn simple_search(&self, query: &query::Search) -> RoaringBitmap {
-        // TODO: generate a result instead of empty vec
+        // TODO: generate a result instead of empty bitmap
 
         // Key search phase
         // Get the list of possible values from the index for each keys

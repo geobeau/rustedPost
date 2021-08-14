@@ -87,4 +87,8 @@ impl RecordStore {
     pub fn multi_get(&self, ids: Vec<u32>) -> Vec<Arc<record::RCRecord>> {
         ids.into_iter().filter_map(|id| self.get(id)).collect()
     }
+
+    pub fn get_all(&self, limit: usize) -> Vec<Arc<record::RCRecord>> {
+        self.id_store.iter().take(limit).cloned().collect()
+    }
 }

@@ -117,6 +117,7 @@ fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPa
     loop {  
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
+            Some(Token::ClosingBraces) => break,
             _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
         };
 
@@ -137,11 +138,12 @@ fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPa
 
         match lex.next() {
             Some(Token::Comma) => continue,
-            Some(Token::ClosingBraces) => return Ok(label_pairs),
+            Some(Token::ClosingBraces) => break,
             _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
         };
 
     }
+    Ok(label_pairs)
 }
 
 
@@ -151,6 +153,7 @@ fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, Stri
     loop {  
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
+            Some(Token::ClosingBraces) => break,
             _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
         };
 
@@ -173,10 +176,11 @@ fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, Stri
 
         match lex.next() {
             Some(Token::Comma) => continue,
-            Some(Token::ClosingBraces) => return Ok(fields),
+            Some(Token::ClosingBraces) => break,
             _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
         };
     }
+    Ok(fields)
 }
 
 #[inline]

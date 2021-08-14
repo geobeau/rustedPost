@@ -39,6 +39,9 @@ impl Search {
             query_flags: flags,
         }
     }
+    pub fn is_match_all(&self) -> bool {
+        self.search_fields.len() == 0
+    }
 }
 
 impl fmt::Display for Search {
@@ -76,6 +79,10 @@ impl KeyValuesSearch {
             search_fields: self.search_fields.clone(),
             query_flags: SearchFlags::DEFAULT,
         }
+    }
+
+    pub fn is_match_all(&self) -> bool {
+        self.search_fields.len() == 0
     }
 }
 

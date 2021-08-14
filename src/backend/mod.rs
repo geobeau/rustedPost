@@ -60,7 +60,11 @@ impl SingleStorageBackend {
     }
 
     fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
-        self.store.multi_get(self.index.search(&search_query))
+        match search_query.is_match_all() {
+            // TODO: implement dynamic limit
+            true => self.store.get_all(10000),
+            false => self.store.multi_get(self.index.search(&search_query)),
+        }
     }
 
     fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
