@@ -9,6 +9,16 @@ use serde::{Deserialize, Serialize};
 
 use std::sync::Arc;
 
+pub trait SingleThreadBackend {
+    fn new(shard_id: u16) -> Self;
+    fn raw_add(&mut self, line: String);
+    fn add(&mut self, record: record::SmallRecord) -> Option<u32>;
+    fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>>;
+    fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>>;
+    fn print_status(&self);
+    fn get_status(&self) -> SingleStorageBackendStatus;
+}
+
 pub struct SingleStorageBackend {
     shard_id: u16,
     store: store::RecordStore,
@@ -22,8 +32,8 @@ pub struct SingleStorageBackendStatus {
     index_status: index::IndexStatus,
 }
 
-impl SingleStorageBackend {
-    pub fn new(shard_id: u16) -> SingleStorageBackend {
+impl SingleThreadBackend for SingleStorageBackend {
+    fn new(shard_id: u16) -> SingleStorageBackend {
         SingleStorageBackend {
             shard_id,
             store: store::RecordStore::new(),
@@ -31,7 +41,7 @@ impl SingleStorageBackend {
         }
     }
 
-    pub fn raw_add(&mut self, line: String) {
+    fn raw_add(&mut self, line: String) {
         let result = lexer::parse_record(line.as_str());
         match result {
             Ok(r) => {
@@ -43,7 +53,7 @@ impl SingleStorageBackend {
         };
     }
 
-    pub fn add(&mut self, record: record::SmallRecord) -> Option<u32> {
+    fn add(&mut self, record: record::SmallRecord) -> Option<u32> {
         let tuple = self.store.add(&record);
         match tuple {
             Some(tuple) => {
@@ -54,7 +64,7 @@ impl SingleStorageBackend {
         }
     }
 
-    pub fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
+    fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         match search_query.is_match_all() {
             // TODO: implement dynamic limit
             true => self.store.get_all(10000),
@@ -62,7 +72,7 @@ impl SingleStorageBackend {
         }
     }
 
-    pub fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
+    fn key_values_search(&self, key_values_search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
         match self.index.key_values_search(&key_values_search_query) {
             index::KeyValuesSearchResult::Ok(x) => {
                 debug!("Search in normal mode (index filtering)");
@@ -93,11 +103,11 @@ impl SingleStorageBackend {
     }
 
     #[allow(dead_code)]
-    pub fn print_status(&self) {
+    fn print_status(&self) {
         self.store.print_status();
     }
 
-    pub fn get_status(&self) -> SingleStorageBackendStatus {
+    fn get_status(&self) -> SingleStorageBackendStatus {
         SingleStorageBackendStatus {
             shard_id: self.shard_id,
             store_status: self.store.get_status(),
