@@ -1,7 +1,7 @@
 use crate::backend::multithread_backend::ShardedStorageBackend;
+use crate::lexer;
 use crate::record;
 use crate::record::query;
-use crate::{backend, lexer};
 use prometheus::{self, Encoder};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;

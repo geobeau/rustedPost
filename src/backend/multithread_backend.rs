@@ -1,14 +1,11 @@
-use crate::index;
-use crate::lexer;
 use crate::record;
 use crate::record::query;
-use crate::store;
+
 use crate::telemetry::LOCAL_SHARD_LATENCY_HISTOGRAM;
 use ahash::AHasher;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use hashbrown::HashSet;
-use log::{debug, error};
-use serde::{Deserialize, Serialize};
+
 use std::hash::Hasher;
 use std::sync::Arc;
 use std::thread::spawn;
