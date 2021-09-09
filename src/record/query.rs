@@ -17,7 +17,7 @@ bitflags! {
 
 pub enum Query {
     Simple(Search),
-    KeyValues(KeyValuesSearch)
+    KeyValues(KeyValuesSearch),
 }
 
 #[derive(Clone, Debug)]

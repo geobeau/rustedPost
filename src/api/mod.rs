@@ -1,23 +1,23 @@
-
-use warp::{Filter, Reply, Rejection};
-use crate::{backend, lexer};
-use crate::record::query;
+use crate::backend::multithread_backend::ShardedStorageBackend;
 use crate::record;
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, RwLock};
-use std::net::SocketAddr;
+use crate::record::query;
+use crate::{backend, lexer};
 use prometheus::{self, Encoder};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::sync::{Arc, RwLock};
+use warp::{Filter, Rejection, Reply};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RawAPIQuery {
-    pub query: String
+    pub query: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ErrorResponse {
     // The query that triggered the error
     pub query: String,
-    pub error: String
+    pub error: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -29,8 +29,8 @@ pub struct SuccessResponse {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ResponseData {
-    Records {data: Vec<Arc<record::RCRecord>>},
-    Values {data: Vec<Arc<str>>}
+    Records { data: Vec<Arc<record::RCRecord>> },
+    Values { data: Vec<Arc<str>> },
 }
 
 async fn metrics_handler() -> Result<impl Reply, Rejection> {
@@ -52,39 +52,42 @@ async fn metrics_handler() -> Result<impl Reply, Rejection> {
     Ok(res)
 }
 
-fn handle_search(search: RawAPIQuery, storage: Arc<RwLock<backend::ShardedStorageBackend>>) -> warp::reply::Json {
+fn handle_search(search: RawAPIQuery, storage: Arc<RwLock<ShardedStorageBackend>>) -> warp::reply::Json {
     let query = match lexer::parse_query(search.query.as_str()) {
         Ok(x) => x,
-        Err(x) => return warp::reply::json(&ErrorResponse{query: search.query, error: x}),
+        Err(x) => {
+            return warp::reply::json(&ErrorResponse {
+                query: search.query,
+                error: x,
+            })
+        }
     };
     let data = match query {
-        query::Query::Simple(x) => ResponseData::Records{data: storage.read().unwrap().search(x)},
-        query::Query::KeyValues(x) => ResponseData::Values{data: storage.read().unwrap().key_values_search(x)},
+        query::Query::Simple(x) => ResponseData::Records {
+            data: storage.read().unwrap().search(x),
+        },
+        query::Query::KeyValues(x) => ResponseData::Values {
+            data: storage.read().unwrap().key_values_search(x),
+        },
     };
-    let response = SuccessResponse{query: search.query, data};
+    let response = SuccessResponse { query: search.query, data };
     warp::reply::json(&response)
 }
 
-fn handle_status(storage: Arc<RwLock<backend::ShardedStorageBackend>>) -> warp::reply::Json {
+fn handle_status(storage: Arc<RwLock<ShardedStorageBackend>>) -> warp::reply::Json {
     let per_shard_status = storage.read().unwrap().get_status();
     warp::reply::json(&per_shard_status)
 }
 
-
-pub async fn serve(addr: impl Into<SocketAddr>, storage: Arc<RwLock<backend::ShardedStorageBackend>>) {
+pub async fn serve(addr: impl Into<SocketAddr>, storage: Arc<RwLock<ShardedStorageBackend>>) {
     let mut storage_clone = storage.clone();
     let search = warp::post()
-    .and(warp::path("search"))
-    .and(warp::body::json())
-    .map(move |search: RawAPIQuery| {
-        handle_search(search, storage_clone.clone())
-    });
+        .and(warp::path("search"))
+        .and(warp::body::json())
+        .map(move |search: RawAPIQuery| handle_search(search, storage_clone.clone()));
 
     storage_clone = storage.clone();
-    let status = warp::get().and(warp::path("status"))
-    .map(move || {
-        handle_status(storage_clone.clone())
-    });
+    let status = warp::get().and(warp::path("status")).map(move || handle_status(storage_clone.clone()));
 
     let prometheus = warp::get().and(warp::path("metrics")).and_then(metrics_handler);
     let www_static = warp::get().and(warp::path::end()).and(warp::fs::dir("web/"));

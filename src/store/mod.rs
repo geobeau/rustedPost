@@ -1,7 +1,7 @@
 use hashbrown::{HashMap, HashSet};
 use log::info;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use super::record;
 

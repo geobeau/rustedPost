@@ -1,12 +1,13 @@
+use crate::backend::multithread_backend::ShardedStorageBackend;
 use clap::{App, Arg};
 use fern;
 use log;
 use log::{debug, error, info};
 use mimalloc::MiMalloc;
-use rusted_post::{backend};
-use rusted_post::record::query;
 use rusted_post::api;
-use rusted_post::telemetry::{INIT_FILE_RECORDS_APPENDED};
+use rusted_post::backend;
+use rusted_post::record::query;
+use rusted_post::telemetry::INIT_FILE_RECORDS_APPENDED;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::sync::{Arc, RwLock};
@@ -16,7 +17,7 @@ use std::vec;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-fn display_timed_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, query: query::Search) {
+fn display_timed_query(backend: &Arc<RwLock<ShardedStorageBackend>>, query: query::Search) {
     let now = Instant::now();
     let records = backend.read().unwrap().search(query.clone());
     info!(
@@ -29,7 +30,7 @@ fn display_timed_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, qu
     );
 }
 
-fn display_timed_key_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, query: query::KeyValuesSearch) {
+fn display_timed_key_query(backend: &Arc<RwLock<ShardedStorageBackend>>, query: query::KeyValuesSearch) {
     let now = Instant::now();
     let records = backend.read().unwrap().key_values_search(query.clone());
     info!(
@@ -43,7 +44,7 @@ fn display_timed_key_query(backend: &Arc<RwLock<backend::ShardedStorageBackend>>
     records.iter().for_each(|record| debug!("Found: {}", record))
 }
 
-fn load_data_from_file(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, filename: &str) {
+fn load_data_from_file(backend: &Arc<RwLock<ShardedStorageBackend>>, filename: &str) {
     info!("Loading dataset from: {}", filename);
     let file = File::open(filename).unwrap();
 
@@ -65,7 +66,6 @@ fn load_data_from_file(backend: &Arc<RwLock<backend::ShardedStorageBackend>>, fi
         ((now.elapsed().as_millis() as f64 / total_count as f64) * 1000_f64) as u32
     );
 }
-
 
 #[tokio::main]
 async fn main() {
@@ -147,7 +147,7 @@ async fn main() {
         }
     };
 
-    let storage = Arc::new(RwLock::new(backend::ShardedStorageBackend::new_with_cpus(threads)));
+    let storage = Arc::new(RwLock::new(ShardedStorageBackend::new_with_cpus(threads)));
 
     ////////////// DATA LOADING AND EXAMPLE QUERIES //////////////
     if !matches.is_present("skip_startup_load") {

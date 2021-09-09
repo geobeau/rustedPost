@@ -1,5 +1,7 @@
+pub mod api;
 pub mod backend;
+mod index;
 pub mod lexer;
 pub mod record;
-pub mod api;
+mod store;
 pub mod telemetry;

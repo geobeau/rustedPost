@@ -7,9 +7,9 @@ use regex::Regex;
 use regex_syntax::hir::literal::Literals;
 use regex_syntax::Parser;
 use roaring::RoaringBitmap;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 pub enum KeyValuesSearchResult {
@@ -109,10 +109,9 @@ impl Index {
     }
 
     pub fn get_status(&self) -> IndexStatus {
-        IndexStatus{}
+        IndexStatus {}
     }
 }
-
 
 #[derive(Clone)]
 struct Field {

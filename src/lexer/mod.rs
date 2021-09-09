@@ -1,9 +1,9 @@
-use crate::record::query;
 use crate::record;
+use crate::record::query;
+use logos::{Lexer, Logos};
 use smallstr::SmallString;
 use smallvec::SmallVec;
 use std::str;
-use logos::{Lexer, Logos};
 
 #[inline]
 fn next_non_space_char(chars: &[u8], start: usize) -> Option<usize> {
@@ -76,7 +76,6 @@ pub fn parse_small_record(l: &str) -> Option<record::SmallRecord> {
     return Some(record::SmallRecord { label_pairs });
 }
 
-
 #[derive(Logos, Debug, PartialEq)]
 enum Token {
     #[token("{")]
@@ -111,14 +110,18 @@ enum Token {
     Error,
 }
 
-
-fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPair; 16]>, String>  {
+fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPair; 16]>, String> {
     let mut label_pairs = SmallVec::new();
-    loop {  
+    loop {
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
             Some(Token::ClosingBraces) => break,
-            _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error bad key format: usage of token: {} used instead of litteral string",
+                    lex.slice()
+                ))
+            }
         };
 
         match lex.next() {
@@ -126,9 +129,14 @@ fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPa
             _ => return Err(format!("Error eq term: {} used instead of =", lex.slice())),
         };
 
-        let val   = match lex.next() {
+        let val = match lex.next() {
             Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-            _ => return Err(format!("Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?",
+                    lex.slice()
+                ))
+            }
         };
         let lp = record::SmallLabelPair {
             key: SmallString::from_str(key),
@@ -139,45 +147,68 @@ fn parse_labels(lex: &mut Lexer<Token>) -> Result<SmallVec<[record::SmallLabelPa
         match lex.next() {
             Some(Token::Comma) => continue,
             Some(Token::ClosingBraces) => break,
-            _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error bad separator in label values: usage of token: {} used instead of , or }}",
+                    lex.slice()
+                ))
+            }
         };
-
     }
     Ok(label_pairs)
 }
 
-
 #[inline]
 fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, String> {
     let mut fields = Vec::new();
-    loop {  
+    loop {
         let key = match lex.next() {
             Some(Token::Literal) => lex.slice(),
             Some(Token::ClosingBraces) => break,
-            _ => return Err(format!("Error bad key format: usage of token: {} used instead of litteral string", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error bad key format: usage of token: {} used instead of litteral string",
+                    lex.slice()
+                ))
+            }
         };
 
         let op = match lex.next() {
             Some(Token::DoubleEqual) => query::Operation::Eq,
             Some(Token::TildeEqual) => query::Operation::Re,
-            _ => return Err(format!("Error eq term: {} used instead of supported == (strict equal) or =~ (regex equal)", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error eq term: {} used instead of supported == (strict equal) or =~ (regex equal)",
+                    lex.slice()
+                ))
+            }
         };
 
-        let val   = match lex.next() {
+        let val = match lex.next() {
             Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-            _ => return Err(format!("Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error wrong value format: {} used, did you forget to enclose it in double quotes \"\"?",
+                    lex.slice()
+                ))
+            }
         };
         let lp = query::Field {
             key: Box::from(key),
             val: Box::from(val),
-            op
+            op,
         };
         fields.push(lp);
 
         match lex.next() {
             Some(Token::Comma) => continue,
             Some(Token::ClosingBraces) => break,
-            _ => return Err(format!("Error bad separator in label values: usage of token: {} used instead of , or }}", lex.slice())),
+            _ => {
+                return Err(format!(
+                    "Error bad separator in label values: usage of token: {} used instead of , or }}",
+                    lex.slice()
+                ))
+            }
         };
     }
     Ok(fields)
@@ -186,7 +217,10 @@ fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, Stri
 #[inline]
 fn parse_fn_search_fields(lex: &mut Lexer<Token>) -> Result<query::Query, String> {
     let search_fields = parse_search_fields(lex)?;
-    return Ok(query::Query::Simple(query::Search { search_fields, query_flags: query::SearchFlags::DEFAULT }));
+    return Ok(query::Query::Simple(query::Search {
+        search_fields,
+        query_flags: query::SearchFlags::DEFAULT,
+    }));
 }
 
 #[inline]
@@ -197,24 +231,42 @@ fn parse_fn_label_values(lex: &mut Lexer<Token>) -> Result<query::Query, String>
     };
     match lex.next() {
         Some(Token::OpeningBraces) => (),
-        _ => return Err(format!("Error first argument of label_values is a search: {} instead of {{<my-search>}}", lex.slice())),
+        _ => {
+            return Err(format!(
+                "Error first argument of label_values is a search: {} instead of {{<my-search>}}",
+                lex.slice()
+            ))
+        }
     };
     let search_fields = parse_search_fields(lex)?;
     match lex.next() {
         Some(Token::Comma) => (),
-        _ => return Err(format!("Error missing , after search: {} instead of , (expecting the key to extract values on)", lex.slice())),
+        _ => {
+            return Err(format!(
+                "Error missing , after search: {} instead of , (expecting the key to extract values on)",
+                lex.slice()
+            ))
+        }
     };
     let key_field = match lex.next() {
         Some(Token::ValueLiteral) => lex.slice().strip_prefix('"').unwrap().strip_suffix('"').unwrap(),
-        _ => return Err(format!("Error wrong format of key: {} used, did you forget to enclose it in double quotes \"\"?", lex.slice())),
+        _ => {
+            return Err(format!(
+                "Error wrong format of key: {} used, did you forget to enclose it in double quotes \"\"?",
+                lex.slice()
+            ))
+        }
     };
     match lex.next() {
         Some(Token::ClosingParenthesis) => (),
         _ => return Err(format!("Error bad function end: {} instead of )", lex.slice())),
     };
-    return Ok(query::Query::KeyValues(query::KeyValuesSearch { search_fields, query_flags: query::SearchFlags::DEFAULT, key_field: Box::from(key_field) }));
+    return Ok(query::Query::KeyValues(query::KeyValuesSearch {
+        search_fields,
+        query_flags: query::SearchFlags::DEFAULT,
+        key_field: Box::from(key_field),
+    }));
 }
-
 
 #[inline]
 pub fn parse_record(l: &str) -> Result<record::SmallRecord, String> {
@@ -222,10 +274,9 @@ pub fn parse_record(l: &str) -> Result<record::SmallRecord, String> {
     let label_pairs = match lex.next() {
         Some(Token::OpeningBraces) => parse_labels(&mut lex),
         _ => return Err(format!("Error wrong format for a record: {} but should start with {{", lex.slice())),
-        
     }?;
     return Ok(record::SmallRecord { label_pairs });
-}  
+}
 
 #[inline]
 pub fn parse_query(l: &str) -> Result<query::Query, String> {
@@ -233,7 +284,10 @@ pub fn parse_query(l: &str) -> Result<query::Query, String> {
     match lex.next() {
         Some(Token::OpeningBraces) => parse_fn_search_fields(&mut lex),
         Some(Token::FnLabelValues) => parse_fn_label_values(&mut lex),
-        _ => Err(format!("Error in search fuction: {}, should either start with {{ or with a function name (label_values)", lex.slice())),  
+        _ => Err(format!(
+            "Error in search fuction: {}, should either start with {{ or with a function name (label_values)",
+            lex.slice()
+        )),
     }
 }
 
@@ -252,7 +306,7 @@ mod tests {
         let quote_field = r#"{author_family_name="Dan\"iels"}"#;
         parse_record(quote_field).unwrap();
         assert!(parse_record(quote_field).is_ok());
-        let escaped_quote_field =  r#"{author_family_name="Dan\"iels\\"}"#;
+        let escaped_quote_field = r#"{author_family_name="Dan\"iels\\"}"#;
         parse_record(escaped_quote_field).unwrap();
         assert!(parse_record(escaped_quote_field).is_ok());
     }
