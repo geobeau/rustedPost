@@ -1,12 +1,86 @@
 use hashbrown::{HashMap, HashSet};
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{slice::Iter, sync::Arc};
 
 use super::record;
 
+struct IdChunk {
+    chunk: Vec::<Arc<record::RCRecord>>
+}
+
+impl IdChunk {
+    fn new() -> IdChunk {
+        return IdChunk{chunk: Vec::with_capacity(2^16) }
+    }
+
+    fn push(&mut self, record: Arc<record::RCRecord>) -> Option<u16> {
+        if self.chunk.len() >= 2^16 {
+            None
+        } else {
+            self.chunk.push(record);
+            Some((self.chunk.len() - 1) as u16)
+        }
+    }
+
+    fn get(&self, id: u16) -> Option<Arc<record::RCRecord>> {
+        match self.chunk.get(id as usize) {
+            Some(x) => Some((*x).clone()),
+            None => None,
+        }
+    }
+}
+
+struct ChunkedIdStore {
+    chunk_vec: Vec<IdChunk>
+}
+
+impl ChunkedIdStore {
+    fn new() -> ChunkedIdStore {
+        return ChunkedIdStore{ chunk_vec: Vec::new() }
+    }
+
+    fn push(&mut self, record: Arc<record::RCRecord>) -> u32 {
+        if self.chunk_vec.is_empty() {
+            self.chunk_vec.push(IdChunk::new());
+        }
+        let lower_bucket = match self.chunk_vec.last_mut().unwrap().push(record.clone()) {
+            Some(id) => id,
+            None => {
+                let mut new_chunk = IdChunk::new();
+                let id = new_chunk.push(record).unwrap();
+                self.chunk_vec.push(new_chunk);
+                id
+            },
+        } as u32;
+        let upper_bucket = ((self.chunk_vec.len() - 1) << 16) as u32;
+        return upper_bucket | lower_bucket;
+    }
+
+    fn get(&self, id: u32) -> Option<Arc<record::RCRecord>> {
+        let upper_bucket = ( id >> 16) as usize;
+        match self.chunk_vec.get(upper_bucket) {
+            Some(chunk) => chunk.get(id as u16),
+            None => None
+        }
+    }
+
+    fn len(&self) -> usize {
+        let upper_bucket = ((self.chunk_vec.len() - 1) << 16) as u32;
+        let lower_bucket = match self.chunk_vec.last() {
+            Some(chunk) => chunk.chunk.len(),
+            None => 0,
+        } as u32;
+        return (upper_bucket | lower_bucket) as usize;
+    }
+
+    fn iter(&self) -> Iter<'_, Arc<record::RCRecord>> {
+        return self.chunk_vec.last().unwrap().chunk.iter()
+    }
+}
+
 pub struct RecordStore {
-    id_store: Vec<Arc<record::RCRecord>>,
+    id_store: ChunkedIdStore,
     hash_store: HashMap<Arc<record::RCRecord>, u32>,
     symbol_store: HashSet<Arc<str>>,
 }
@@ -18,13 +92,12 @@ pub struct RecordStoreStatus {
     hash_store_size: usize,
     hash_store_hashtable_capacity: usize,
     id_store_size: usize,
-    id_store_hashtable_capacity: usize,
 }
 
 impl RecordStore {
     pub fn new() -> RecordStore {
         RecordStore {
-            id_store: Vec::new(),
+            id_store: ChunkedIdStore::new(),
             hash_store: HashMap::new(),
             symbol_store: HashSet::new(),
         }
@@ -49,8 +122,7 @@ impl RecordStore {
             Some(_record) => None,
             _ => {
                 let rc = Arc::new(new_record);
-                self.id_store.push(rc.clone());
-                let id = (self.id_store.len() - 1) as u32;
+                let id = self.id_store.push(rc.clone());
                 self.hash_store.insert(rc.clone(), id);
                 Some((id, rc.clone()))
             }
@@ -58,10 +130,7 @@ impl RecordStore {
     }
 
     pub fn get(&self, id: u32) -> Option<Arc<record::RCRecord>> {
-        match self.id_store.get(id as usize) {
-            Some(x) => Some((*x).clone()),
-            None => None,
-        }
+        self.id_store.get(id)
     }
 
     pub fn print_status(&self) {
@@ -80,7 +149,6 @@ impl RecordStore {
             id_store_size: self.id_store.len(),
             symbol_store_hashtable_capacity: self.symbol_store.capacity(),
             hash_store_hashtable_capacity: self.hash_store.capacity(),
-            id_store_hashtable_capacity: self.id_store.capacity(),
         }
     }
 

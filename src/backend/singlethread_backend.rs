@@ -91,7 +91,6 @@ impl SingleThreadBackend for SingleStorageBackend {
                             Some(pair) => Some(pair.val.clone()),
                             None => None,
                         }
-                        // TODO return ARC instead of converting to Box
                     })
                     .collect()
             }
