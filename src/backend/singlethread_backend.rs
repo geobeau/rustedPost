@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub trait SingleThreadBackend {
-    fn new(shard_id: u16) -> Self;
+    fn new() -> Self;
     fn raw_add(&mut self, line: String);
     fn add(&mut self, record: record::SmallRecord) -> Option<u32>;
     fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>>;
@@ -20,22 +20,19 @@ pub trait SingleThreadBackend {
 }
 
 pub struct SingleStorageBackend {
-    shard_id: u16,
     store: store::RecordStore,
     index: index::Index,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SingleStorageBackendStatus {
-    shard_id: u16,
     store_status: store::RecordStoreStatus,
     index_status: index::IndexStatus,
 }
 
 impl SingleThreadBackend for SingleStorageBackend {
-    fn new(shard_id: u16) -> SingleStorageBackend {
+    fn new() -> SingleStorageBackend {
         SingleStorageBackend {
-            shard_id,
             store: store::RecordStore::new(),
             index: index::Index::new(),
         }
@@ -109,7 +106,6 @@ impl SingleThreadBackend for SingleStorageBackend {
 
     fn get_status(&self) -> SingleStorageBackendStatus {
         SingleStorageBackendStatus {
-            shard_id: self.shard_id,
             store_status: self.store.get_status(),
             index_status: self.index.get_status(),
         }

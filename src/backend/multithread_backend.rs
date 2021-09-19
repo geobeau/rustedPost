@@ -4,6 +4,7 @@ use crate::record::query;
 use crate::telemetry::LOCAL_SHARD_LATENCY_HISTOGRAM;
 use ahash::AHasher;
 use crossbeam_channel::{bounded, Receiver, Sender};
+use serde::{Deserialize, Serialize};
 use hashbrown::HashSet;
 
 use std::hash::Hasher;
@@ -16,7 +17,7 @@ use super::singlethread_backend::*;
 #[allow(dead_code)]
 enum BackendRequest {
     StatusRequest {
-        response_chan: Sender<SingleStorageBackendStatus>,
+        response_chan: Sender<ShardedStorageBackendStatus>,
     },
     RawAddRequest {
         line: String,
@@ -35,8 +36,15 @@ enum BackendRequest {
     },
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ShardedStorageBackendStatus {
+    shard_status: SingleStorageBackendStatus,
+    shard_id: u16
+}
+
+
 fn shard_handler(request_rcv: Receiver<BackendRequest>, shard_id: u16) {
-    let mut backend = SingleStorageBackend::new(shard_id);
+    let mut backend = SingleStorageBackend::new();
     let mut start;
     let mut request;
     loop {
@@ -44,7 +52,7 @@ fn shard_handler(request_rcv: Receiver<BackendRequest>, shard_id: u16) {
         start = Instant::now();
         match request {
             BackendRequest::StatusRequest { response_chan } => {
-                response_chan.send(backend.get_status()).unwrap();
+                response_chan.send(ShardedStorageBackendStatus {shard_status: backend.get_status(), shard_id}).unwrap();
             }
             BackendRequest::RawAddRequest { line } => {
                 backend.raw_add(line);
@@ -108,7 +116,7 @@ impl ShardedStorageBackend {
     //     r.recv().unwrap()
     // }
 
-    pub fn get_status(&self) -> Vec<SingleStorageBackendStatus> {
+    pub fn get_status(&self) -> Vec<ShardedStorageBackendStatus> {
         let (s, r) = bounded(self.shards.len());
         (&self.shards).into_iter().for_each(|shard| {
             shard.send(BackendRequest::StatusRequest { response_chan: s.clone() }).unwrap();
