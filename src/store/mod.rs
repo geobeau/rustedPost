@@ -1,5 +1,5 @@
 use hashbrown::{HashMap, HashSet};
-use log::info;
+use log::{info};
 use serde::{Deserialize, Serialize};
 use std::{slice::Iter, sync::Arc};
 
@@ -11,11 +11,11 @@ struct IdChunk {
 
 impl IdChunk {
     fn new() -> IdChunk {
-        return IdChunk{chunk: Vec::with_capacity(2^16) }
+        return IdChunk{chunk: Vec::with_capacity(2_usize.pow(16)) }
     }
 
     fn push(&mut self, record: Arc<record::RCRecord>) -> Option<u16> {
-        if self.chunk.len() >= 2^16 {
+        if self.chunk.len() >= 2_usize.pow(16) {
             None
         } else {
             self.chunk.push(record);
