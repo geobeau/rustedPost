@@ -75,6 +75,7 @@ impl ChunkedIdStore {
     }
 
     fn iter(&self) -> Iter<'_, Arc<record::RCRecord>> {
+        // TODO: Make it iter over all records
         return self.chunk_vec.last().unwrap().chunk.iter()
     }
 }
