@@ -1,7 +1,7 @@
 use hashbrown::{HashMap, HashSet};
 use log::{info};
 use serde::{Deserialize, Serialize};
-use std::{slice::Iter, sync::Arc};
+use std::sync::Arc;
 
 use super::record;
 
@@ -74,9 +74,28 @@ impl ChunkedIdStore {
         return (upper_bucket | lower_bucket) as usize;
     }
 
-    fn iter(&self) -> Iter<'_, Arc<record::RCRecord>> {
+    fn iter(&self) -> ChunkedIdStoreIter {
         // TODO: Make it iter over all records
-        return self.chunk_vec.last().unwrap().chunk.iter()
+        return ChunkedIdStoreIter{pointer: 0, chunk_store: self }
+    }
+}
+
+struct ChunkedIdStoreIter<'a> {
+    pointer: u32,
+    chunk_store: &'a ChunkedIdStore
+}
+
+impl<'a> Iterator for ChunkedIdStoreIter<'a> {
+    type Item = Arc<record::RCRecord>;
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.pointer as usize, Some(self.chunk_store.len() as usize))
+    }
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let r = self.chunk_store.get(self.pointer);
+        self.pointer += 1;
+        r
     }
 }
 
@@ -158,6 +177,6 @@ impl RecordStore {
     }
 
     pub fn get_all(&self, limit: usize) -> Vec<Arc<record::RCRecord>> {
-        self.id_store.iter().take(limit).cloned().collect()
+        self.id_store.iter().take(limit).collect()
     }
 }
