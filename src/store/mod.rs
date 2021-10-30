@@ -102,13 +102,10 @@ impl<'a> Iterator for ChunkedIdStoreIter<'a> {
 pub struct RecordStore {
     id_store: ChunkedIdStore,
     hash_store: HashMap<Arc<record::RCRecord>, u32>,
-    symbol_store: HashSet<Arc<str>>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RecordStoreStatus {
-    symbol_store_size: usize,
-    symbol_store_hashtable_capacity: usize,
     hash_store_size: usize,
     hash_store_hashtable_capacity: usize,
     id_store_size: usize,
@@ -119,29 +116,16 @@ impl RecordStore {
         RecordStore {
             id_store: ChunkedIdStore::new(),
             hash_store: HashMap::new(),
-            symbol_store: HashSet::new(),
         }
     }
 
-    fn new_rcrecord_from(&mut self, record: &record::SmallRecord) -> record::RCRecord {
-        let label_pairs = (&record.label_pairs)
-            .iter()
-            .map(|l| {
-                let key = self.symbol_store.get_or_insert_with(l.key.as_str(), |x| Arc::from(x)).clone();
-                let val = self.symbol_store.get_or_insert_with(l.val.as_str(), |x| Arc::from(x)).clone();
-                record::RCLabelPair { key, val }
-            })
-            .collect();
-        record::RCRecord { label_pairs }
-    }
 
-    pub fn add(&mut self, original_record: &record::SmallRecord) -> Option<(u32, Arc<record::RCRecord>)> {
-        let new_record = self.new_rcrecord_from(original_record);
-        let result = self.hash_store.get(&new_record);
+    pub fn add(&mut self, original_record: record::RCRecord) -> Option<(u32, Arc<record::RCRecord>)> {
+        let rc = Arc::new(original_record);
+        let result = self.hash_store.get(&rc);
         match result {
             Some(_record) => None,
             _ => {
-                let rc = Arc::new(new_record);
                 let id = self.id_store.push(rc.clone());
                 self.hash_store.insert(rc.clone(), id);
                 Some((id, rc.clone()))
@@ -155,8 +139,7 @@ impl RecordStore {
 
     pub fn print_status(&self) {
         info!(
-            "Size of structs: symbols: {}, hashes: {}, ids: {}",
-            self.symbol_store.len(),
+            "Size of structs: hashes: {}, ids: {}",
             self.hash_store.len(),
             self.id_store.len()
         );
@@ -164,10 +147,8 @@ impl RecordStore {
 
     pub fn get_status(&self) -> RecordStoreStatus {
         RecordStoreStatus {
-            symbol_store_size: self.symbol_store.len(),
             hash_store_size: self.hash_store.len(),
             id_store_size: self.id_store.len(),
-            symbol_store_hashtable_capacity: self.symbol_store.capacity(),
             hash_store_hashtable_capacity: self.hash_store.capacity(),
         }
     }

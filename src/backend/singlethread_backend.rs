@@ -4,6 +4,7 @@ use crate::record;
 use crate::record::query;
 use crate::store;
 
+use hashbrown::HashSet;
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +23,7 @@ pub trait SingleThreadBackend {
 pub struct SingleStorageBackend {
     store: store::RecordStore,
     index: index::Index,
+    symbol_store: HashSet<Arc<str>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -30,11 +32,26 @@ pub struct SingleStorageBackendStatus {
     index_status: index::IndexStatus,
 }
 
+impl SingleStorageBackend {
+    fn new_rcrecord_from(&mut self, record: &record::SmallRecord) -> record::RCRecord {
+        let label_pairs = (&record.label_pairs)
+            .iter()
+            .map(|l| {
+                let key = self.symbol_store.get_or_insert_with(l.key.as_str(), |x| Arc::from(x)).clone();
+                let val = self.symbol_store.get_or_insert_with(l.val.as_str(), |x| Arc::from(x)).clone();
+                record::RCLabelPair { key, val }
+            })
+            .collect();
+        record::RCRecord { label_pairs }
+    }
+}
+
 impl SingleThreadBackend for SingleStorageBackend {
     fn new() -> SingleStorageBackend {
         SingleStorageBackend {
             store: store::RecordStore::new(),
             index: index::Index::new(),
+            symbol_store: HashSet::new(),
         }
     }
 
@@ -51,7 +68,8 @@ impl SingleThreadBackend for SingleStorageBackend {
     }
 
     fn add(&mut self, record: record::SmallRecord) -> Option<u32> {
-        let tuple = self.store.add(&record);
+        let new_record = self.new_rcrecord_from(&record);
+        let tuple = self.store.add(new_record);
         match tuple {
             Some(tuple) => {
                 self.index.insert_record(tuple.0, &tuple.1);
