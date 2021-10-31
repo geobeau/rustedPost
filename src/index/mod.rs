@@ -72,10 +72,7 @@ impl Index {
             .search_fields
             .clone()
             .into_iter()
-            .map(|query| match self.label_key_index.get(query.key.as_ref()) {
-                Some(field) => Some((query, field)),
-                None => None,
-            })
+            .map(|query| self.label_key_index.get(query.key.as_ref()).map(|field| (query, field)))
             .collect();
 
         if key_search.is_none() {
@@ -103,7 +100,7 @@ impl Index {
 
     pub fn insert_record(&mut self, id: u32, record: &record::RCRecord) {
         for pair in &record.label_pairs {
-            let field = self.label_key_index.entry(pair.key.clone()).or_insert_with(|| Field::new());
+            let field = self.label_key_index.entry(pair.key.clone()).or_insert_with(Field::new);
             field.add_posting(pair.val.clone(), id);
         }
     }
@@ -124,7 +121,7 @@ impl<'a> Field {
     }
 
     fn add_posting(&mut self, key: Arc<str>, id: u32) {
-        let posting_list = self.field_map.entry(key).or_insert_with(|| RoaringBitmap::new());
+        let posting_list = self.field_map.entry(key).or_insert_with(RoaringBitmap::new);
         posting_list.insert(id);
     }
 
@@ -146,7 +143,7 @@ impl<'a> Field {
                         .take_while(|(k, _)| (**k).starts_with(&*lit.1.clone()))
                         .for_each(|field| {
                             count += 1;
-                            if re.is_match(&field.0) {
+                            if re.is_match(field.0) {
                                 result |= field.1;
                                 matched += 1;
                             }
@@ -155,16 +152,13 @@ impl<'a> Field {
                     count += 1;
                     matched += 1;
                     // If it's an exact match do a simple get
-                    match self.field_map.get(&*lit.1) {
-                        Some(list) => result |= list,
-                        None => (),
-                    }
+                    if let Some(list) = self.field_map.get(&*lit.1) { result |= list }
                 }
             });
         } else {
-            (&self.field_map).into_iter().for_each(|b| {
+            (&self.field_map).iter().for_each(|b| {
                 count += 1;
-                if re.is_match(&b.0) {
+                if re.is_match(b.0) {
                     result |= b.1;
                     matched += 1;
                 }
@@ -198,7 +192,7 @@ pub fn optimize_regex(regex: &str) -> Vec<(bool, Arc<str>)> {
     let hir = Parser::new().parse(regex).unwrap();
     Literals::prefixes(&hir)
         .literals()
-        .into_iter()
+        .iter()
         .map(|l| {
             // I didn't find a better way :'(, everything is private
             let re = if l.is_cut() { &re_cut } else { &re_complete };

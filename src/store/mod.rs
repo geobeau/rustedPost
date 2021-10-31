@@ -11,7 +11,7 @@ struct IdChunk {
 
 impl IdChunk {
     fn new() -> IdChunk {
-        return IdChunk{chunk: Vec::with_capacity(2_usize.pow(16)) }
+        IdChunk{chunk: Vec::with_capacity(2_usize.pow(16)) }
     }
 
     fn push(&mut self, record: Arc<record::RCRecord>) -> Option<u16> {
@@ -24,10 +24,7 @@ impl IdChunk {
     }
 
     fn get(&self, id: u16) -> Option<Arc<record::RCRecord>> {
-        match self.chunk.get(id as usize) {
-            Some(x) => Some((*x).clone()),
-            None => None,
-        }
+        self.chunk.get(id as usize).map(|x| (*x).clone())
     }
 }
 
@@ -54,7 +51,7 @@ impl ChunkedIdStore {
             },
         } as u32;
         let upper_bucket = ((self.chunk_vec.len() - 1) << 16) as u32;
-        return upper_bucket | lower_bucket;
+        upper_bucket | lower_bucket
     }
 
     fn get(&self, id: u32) -> Option<Arc<record::RCRecord>> {
@@ -75,8 +72,7 @@ impl ChunkedIdStore {
     }
 
     fn iter(&self) -> ChunkedIdStoreIter {
-        // TODO: Make it iter over all records
-        return ChunkedIdStoreIter{pointer: 0, chunk_store: self }
+        ChunkedIdStoreIter{pointer: 0, chunk_store: self }
     }
 }
 

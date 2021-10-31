@@ -9,10 +9,10 @@ use std::str;
 fn next_non_space_char(chars: &[u8], start: usize) -> Option<usize> {
     for i in start..chars.len() {
         if chars[i] != b' ' {
-            return Some(i);
+            Some(i);
         }
     }
-    return None;
+    None
 }
 
 #[inline]
@@ -22,7 +22,7 @@ fn find_next(chars: &[u8], start: usize, matcher: u8) -> Option<usize> {
             return Some(i);
         }
     }
-    return None;
+    None
 }
 
 #[inline]
@@ -73,7 +73,7 @@ pub fn parse_small_record(l: &str) -> Option<record::SmallRecord> {
             _ => return None,
         };
     }
-    return Some(record::SmallRecord { label_pairs });
+    Some(record::SmallRecord { label_pairs })
 }
 
 #[derive(Logos, Debug, PartialEq)]
@@ -217,10 +217,10 @@ fn parse_search_fields(lex: &mut Lexer<Token>) -> Result<Vec<query::Field>, Stri
 #[inline]
 fn parse_fn_search_fields(lex: &mut Lexer<Token>) -> Result<query::Query, String> {
     let search_fields = parse_search_fields(lex)?;
-    return Ok(query::Query::Simple(query::Search {
+    Ok(query::Query::Simple(query::Search {
         search_fields,
         query_flags: query::SearchFlags::DEFAULT,
-    }));
+    }))
 }
 
 #[inline]
@@ -275,7 +275,7 @@ pub fn parse_record(l: &str) -> Result<record::SmallRecord, String> {
         Some(Token::OpeningBraces) => parse_labels(&mut lex),
         _ => return Err(format!("Error wrong format for a record: {} but should start with {{", lex.slice())),
     }?;
-    return Ok(record::SmallRecord { label_pairs });
+    Ok(record::SmallRecord { label_pairs })
 }
 
 #[inline]

@@ -91,7 +91,7 @@ impl SingleThreadBackend for SingleStorageBackend {
         match self.index.key_values_search(&key_values_search_query) {
             index::KeyValuesSearchResult::Ok(x) => {
                 debug!("Search in normal mode (index filtering)");
-                return x;
+                x
             }
             index::KeyValuesSearchResult::DirtyOk(x) => {
                 debug!("Search in dirty mode (post filtering)");
@@ -105,10 +105,7 @@ impl SingleThreadBackend for SingleStorageBackend {
                             .label_pairs
                             .iter()
                             .find(|pair| pair.key.as_ref() == key_values_search_query.key_field.as_ref());
-                        match pair {
-                            Some(pair) => Some(pair.val.clone()),
-                            None => None,
-                        }
+                        pair.map(|pair| pair.val.clone())
                     })
                     .collect()
             }

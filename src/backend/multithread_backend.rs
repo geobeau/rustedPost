@@ -118,16 +118,16 @@ impl ShardedStorageBackend {
 
     pub fn get_status(&self) -> Vec<ShardedStorageBackendStatus> {
         let (s, r) = bounded(self.shards.len());
-        (&self.shards).into_iter().for_each(|shard| {
+        (&self.shards).iter().for_each(|shard| {
             shard.send(BackendRequest::StatusRequest { response_chan: s.clone() }).unwrap();
         });
         drop(s);
-        r.into_iter().map(|f| f).collect()
+        r.iter().collect()
     }
 
     pub fn search(&self, search_query: query::Search) -> Vec<Arc<record::RCRecord>> {
         let (s, r) = bounded(1000);
-        (&self.shards).into_iter().for_each(|shard| {
+        (&self.shards).iter().for_each(|shard| {
             shard
                 .send(BackendRequest::SearchRequest {
                     query: search_query.clone(),
@@ -136,12 +136,12 @@ impl ShardedStorageBackend {
                 .unwrap();
         });
         drop(s);
-        r.into_iter().map(|f| f).collect()
+        r.iter().collect()
     }
 
     pub fn key_values_search(&self, search_query: query::KeyValuesSearch) -> Vec<Arc<str>> {
         let (s, r) = bounded(1000);
-        (&self.shards).into_iter().for_each(|shard| {
+        (&self.shards).iter().for_each(|shard| {
             shard
                 .send(BackendRequest::KeyValuesSearchRequest {
                     query: search_query.clone(),
@@ -150,13 +150,13 @@ impl ShardedStorageBackend {
                 .unwrap();
         });
         drop(s);
-        let result: HashSet<Arc<str>> = r.into_iter().map(|f| f).collect();
+        let result: HashSet<Arc<str>> = r.iter().collect();
         result.into_iter().collect()
     }
 
     pub fn wait_pending_operations(&self) {
         loop {
-            let empty = (&self.shards).into_iter().fold(true, |a, s| a && s.is_empty());
+            let empty = (&self.shards).iter().all(|s| s.is_empty());
             if empty {
                 break;
             }

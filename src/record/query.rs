@@ -40,7 +40,7 @@ impl Search {
         }
     }
     pub fn is_match_all(&self) -> bool {
-        self.search_fields.len() == 0
+        self.search_fields.is_empty()
     }
 }
 
@@ -82,7 +82,7 @@ impl KeyValuesSearch {
     }
 
     pub fn is_match_all(&self) -> bool {
-        self.search_fields.len() == 0
+        self.search_fields.is_empty()
     }
 }
 
