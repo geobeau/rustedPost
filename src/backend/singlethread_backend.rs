@@ -42,7 +42,7 @@ impl SingleStorageBackend {
                 record::RCLabelPair { key, val }
             })
             .collect();
-        record::RCRecord { label_pairs }
+        record::RCRecord::new(label_pairs)
     }
 }
 

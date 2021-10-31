@@ -1,9 +1,11 @@
 use itertools::free::join;
+use ahash::{AHasher, RandomState};
 use serde::{Deserialize, Serialize};
 use smallstr::SmallString;
 use smallvec::SmallVec;
 use std::cmp::Eq;
 use std::fmt;
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::str;
 use std::sync::Arc;
 
@@ -31,9 +33,27 @@ impl LabelPair {
 }
 
 /////////////////////////// RC RECORDS ///////////////////////////
-#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RCRecord {
     pub label_pairs: Vec<RCLabelPair>,
+    hash_cache: u64
+}
+
+impl RCRecord {
+    pub fn new(pairs: Vec<RCLabelPair>) -> RCRecord {
+        let mut state = RandomState::new().build_hasher();
+        pairs.hash(&mut state);
+        RCRecord {
+            label_pairs: pairs,
+            hash_cache: state.finish(),
+        }
+    }
+}
+
+impl Hash for RCRecord {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.hash_cache);
+    }
 }
 
 impl fmt::Display for RCRecord {

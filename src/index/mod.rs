@@ -216,33 +216,33 @@ mod tests {
     fn load_test_data(index: &mut Index) {
         index.insert_record(
             0,
-            &record::RCRecord {
-                label_pairs: vec![
+            &record::RCRecord::new(
+                vec![
                     record::RCLabelPair::new("keya", "val1"),
                     record::RCLabelPair::new("keyb", "val1"),
                     record::RCLabelPair::new("keyc", "val3"),
-                ],
-            },
+                ]
+            ),
         );
         index.insert_record(
             1,
-            &record::RCRecord {
-                label_pairs: vec![
+            &record::RCRecord::new(
+                vec![
                     record::RCLabelPair::new("keya", "val1"),
                     record::RCLabelPair::new("keyb", "val2"),
                     record::RCLabelPair::new("keyc", "val2"),
-                ],
-            },
+                ]
+            ),
         );
         index.insert_record(
             2,
-            &record::RCRecord {
-                label_pairs: vec![
+            &record::RCRecord::new(
+                vec![
                     record::RCLabelPair::new("keya", "val1"),
                     record::RCLabelPair::new("keyb", "val1"),
                     record::RCLabelPair::new("keyc", "val1"),
-                ],
-            },
+                ]
+            ),
         );
     }
 
