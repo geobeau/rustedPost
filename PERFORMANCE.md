@@ -63,6 +63,11 @@ by ~10% (from 18s to 16s) without downsides.
 Second optimisation is avoid copying data. A record is stored as a RC record in the heap and we
 just move the reference around.
 
+## Hash memoization
+
+Computing the hash of a record can be fairly expensive as all the string are stores in Arc with high fragmentation. We can compute the hash when we instanciate the struct and reuse it everytime we need to
+hash. This is especially useful when hashmap are resizing. It saved around 10% CPU at ingest time!
+
 # Queries
 
 ## Regex search
