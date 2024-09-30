@@ -1,5 +1,5 @@
 use itertools::free::join;
-use ahash::{RandomState};
+use ahash::RandomState;
 use serde::{Deserialize, Serialize};
 use smallstr::SmallString;
 use smallvec::SmallVec;

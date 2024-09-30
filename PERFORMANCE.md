@@ -19,6 +19,33 @@ Memory usage is computed by running (output is in GiB or MiB):
 ps x -o rss,vsz,command | grep -i target/debug/rusted_post | grep -v grep | numfmt --from-unit=1024 --to=iec --field 1-2
 ```
 
+# Roaring bitmaps
+
+## bitmaps
+
+Posting lists are sequence of ints that need to be intersected. A common way to implement them is to use bitmap. instead of storing the actual number, we can flip the bit at the index of the number to 1:
+```
+0 -> 1000 0000
+1 -> 0100 0000
+2 -> 0010 0000
+etc...
+
+3,4,7 -> 0001 1001
+```
+
+Intersection can quickly be calculate with the AND operation.
+
+## Roaring bitmaps
+
+bitmaps are efficient when the numbers are close but if they are spares you need to have bits for the whole set. For a uint32: 2**32 = 4B bits ~= 500 MB.
+
+Roaring bitmaps allow compressing the information by storing segments of numbers in different containers:
+- as bitmap (if it's dense enough)
+- as a list of int (if it's spase)
+- as "all to 1" (if all numbers are 1)
+- as "all to 0" 
+
+
 # Multithreading
 
 The code is single threaded. The reason is that if clustering is added, one

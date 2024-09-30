@@ -79,21 +79,21 @@ async fn main() {
                 .short('t')
                 .long("threads")
                 .value_name("Number of threads")
-                .about("Number of threads to use for shards")
+                .help("Number of threads to use for shards")
                 .default_value("4")
                 .takes_value(true),
         )
         .arg(
             Arg::new("skip_startup_load")
                 .long("skip-startup-load")
-                .about("Skip the loading of data at startup"),
+                .help("Skip the loading of data at startup"),
         )
         .arg(
             Arg::new("file_to_load")
                 .short('d')
                 .long("load-from-file")
                 .value_name("Path to file")
-                .about("Path of the file to load data at startup")
+                .help("Path of the file to load data at startup")
                 .takes_value(true)
                 .default_value("data/dataset_custom.txt"),
         )
@@ -102,7 +102,7 @@ async fn main() {
                 .short('v')
                 .long("log-level")
                 .takes_value(true)
-                .about("Change the verbosity (debug, info, err, warn)")
+                .help("Change the verbosity (debug, info, err, warn)")
                 .default_value("info"),
         )
         .get_matches();
